@@ -1,2 +1,5 @@
 __pycache__/
 .eggs/
+build/
+dist/
+livy.egg-info/
