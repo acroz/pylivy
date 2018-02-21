@@ -8,7 +8,7 @@ README = Path(__file__).parent / 'README.rst'
 setup(
     name='livy',
     version='0.1.0',
-    description='Python client for Apache Livy',
+    description='A Python client for Apache Livy',
     long_description=README.read_text(),
     py_modules=['livy'],
     url='https://github.com/acroz/pylivy',
