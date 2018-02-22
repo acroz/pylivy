@@ -1,6 +1,7 @@
 import time
 import json
 import logging
+from enum import Enum
 
 import requests
 import pandas
@@ -151,6 +152,15 @@ class Session:
     
     def kill(self):
         self._client.delete()
+
+
+class StatementState(Enum):
+    WAITING = 'waiting'
+    RUNNING = 'running'
+    AVAILABLE = 'available'
+    ERROR = 'error'
+    CANCELLING = 'cancelling'
+    CANCELLED = 'cancelled'
     
 
 class Statement:
@@ -170,7 +180,7 @@ class Statement:
     def from_json(cls, url, session_id, data):
         return cls(
             url, session_id,
-            data['id'], data['state'], data['output']
+            data['id'], StatementState(data['state']), data['output']
         )
     
     def __repr__(self):
@@ -187,7 +197,7 @@ class Statement:
         if response['id'] != self.id_:
             raise RuntimeError('mismatched ids')
             
-        self.state = response['state']
+        self.state = StatementState(response['state'])
         
         if response['output'] is None:
             self.output = None
@@ -195,7 +205,7 @@ class Statement:
             self.output = Output.from_json(response['output'])
         
     def wait(self, interval=1.0):
-        while self.state != 'available':
+        while self.state in {StatementState.WAITING, StatementState.RUNNING}:
             time.sleep(interval)
             self.refresh()
             
