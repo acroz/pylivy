@@ -113,6 +113,17 @@ class SessionManager:
         return Session.from_json(self.url, response)
 
 
+class SessionState(Enum):
+    NOT_STARTED = 'not_started'
+    STARTING = 'starting'
+    IDLE = 'idle'
+    BUSY = 'busy'
+    SHUTTING_DOWN = 'shutting_down'
+    ERROR = 'error'
+    DEAD = 'dead'
+    SUCCESS = 'success'
+
+
 class Session:
     
     def __init__(self, url, id_, state):
@@ -123,7 +134,7 @@ class Session:
         
     @classmethod
     def from_json(cls, url, data):
-        return cls(url, data['id'], data['state'])
+        return cls(url, data['id'], SessionState(data['state']))
     
     def __repr__(self):
         name = self.__class__.__name__
@@ -144,11 +155,12 @@ class Session:
         ]
         
     def ready(self):
-        return self.state not in ['not_started', 'starting']
+        non_ready_states = {SessionState.NOT_STARTED, SessionState.STARTING}
+        return self.state not in non_ready_states
         
     def refresh(self):
         response = self._client.get('/state')
-        self.state = response['state']
+        self.state = SessionState(response['state'])
     
     def kill(self):
         self._client.delete()
