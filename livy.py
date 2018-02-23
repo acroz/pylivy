@@ -26,9 +26,11 @@ def extract_serialised_dataframe(text):
 
 class Livy:
     
-    def __init__(self, url=DEFAULT_URL):
+    def __init__(self, url=DEFAULT_URL, echo=True, check=True):
         self.manager = SessionManager(url)
         self.session = None
+        self.echo = echo
+        self.check = check
         
     def __enter__(self):
         self.start()
@@ -42,8 +44,22 @@ class Livy:
         
     def close(self):
         self.session.kill()
-        
+
     def run(self, code):
+        output = self._execute(code)
+        if self.echo and output.text:
+            print(output.text)
+        if self.check:
+            output.raise_for_status()
+        return output
+        
+    def read(self, dataframe_name):
+        code = SERIALISE_DATAFRAME_TEMPLATE.format(dataframe_name)
+        output = self._execute(code)
+        output.raise_for_status()
+        return extract_serialised_dataframe(output.text)
+
+    def _execute(self, code):
         self._wait_for_session()
         LOGGER.info('Beginning code statement execution')
         statement = self.session.run_statement(code)
@@ -53,13 +69,6 @@ class Livy:
             f'{statement.output.status}'
         )
         return statement.output
-        
-    def read(self, dataframe_name):
-        code = SERIALISE_DATAFRAME_TEMPLATE.format(dataframe_name)
-        output = self.run(code)
-        if output.status != 'ok':
-            raise RuntimeError(f'dataframe serialisation failed: {output}')
-        return extract_serialised_dataframe(output.text)
         
     def _wait_for_session(self):
         if not self.session.ready():
@@ -221,21 +230,47 @@ class Statement:
             time.sleep(interval)
             self.refresh()
             
+    
+    
+class SparkRuntimeError(Exception):
+    
+    def __init__(self, ename, evalue, traceback):
+        self.ename = ename
+        self.evalue = evalue
+        self.traceback = traceback
+        
+    def __repr__(self):
+        name = self.__class__.__name__
+        components = []
+        if self.ename is not None:
+            components.append(f'ename={self.ename!r}')
+        if self.evalue is not None:
+            components.append(f'evalue={self.evalue!r}')
+        return f'{name}({", ".join(components)})'
+        
             
+class OutputStatus(Enum):
+    OK = 'ok'
+    ERROR = 'error'
+
+
 class Output:
     
-    def __init__(self, status, text=None, ename=None, traceback=None):
+    def __init__(self, status, text=None, ename=None, evalue=None,
+                 traceback=None):
         self.status = status
         self.text = text
         self.ename = ename
+        self.evalue = evalue
         self.traceback = traceback
         
     @classmethod
     def from_json(cls, data):
         return cls(
-            data['status'],
+            OutputStatus(data['status']),
             data.get('data', {}).get('text/plain'),
             data.get('ename'),
+            data.get('evalue'),
             data.get('traceback')
         )
         
@@ -249,3 +284,7 @@ class Output:
         if self.traceback is not None:
             components.append(f'traceback={self.traceback!r}')
         return f'{name}({", ".join(components)})'
+        
+    def raise_for_status(self):
+        if self.status == OutputStatus.ERROR:
+            raise SparkRuntimeError(self.ename, self.evalue, self.traceback)
