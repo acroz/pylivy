@@ -53,7 +53,7 @@ class Livy:
     def read(self, dataframe_name):
         code = SERIALISE_DATAFRAME_TEMPLATE.format(dataframe_name)
         output = self._execute(code)
-        if output.status != 'ok':
+        if output.status != OutputStatus.OK:
             raise RuntimeError(f'dataframe serialisation failed: {output}')
         return extract_serialised_dataframe(output.text)
 
@@ -229,6 +229,11 @@ class Statement:
             self.refresh()
             
             
+class OutputStatus(Enum):
+    OK = 'ok'
+    ERROR = 'error'
+
+
 class Output:
     
     def __init__(self, status, text=None, ename=None, traceback=None):
@@ -240,7 +245,7 @@ class Output:
     @classmethod
     def from_json(cls, data):
         return cls(
-            data['status'],
+            OutputStatus(data['status']),
             data.get('data', {}).get('text/plain'),
             data.get('ename'),
             data.get('traceback')
