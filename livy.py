@@ -26,10 +26,11 @@ def extract_serialised_dataframe(text):
 
 class Livy:
     
-    def __init__(self, url=DEFAULT_URL, echo=True):
+    def __init__(self, url=DEFAULT_URL, echo=True, check=True):
         self.manager = SessionManager(url)
         self.session = None
         self.echo = echo
+        self.check = check
         
     def __enter__(self):
         self.start()
@@ -48,13 +49,14 @@ class Livy:
         output = self._execute(code)
         if self.echo and output.text:
             print(output.text)
+        if self.check:
+            output.raise_for_status()
         return output
         
     def read(self, dataframe_name):
         code = SERIALISE_DATAFRAME_TEMPLATE.format(dataframe_name)
         output = self._execute(code)
-        if output.status != OutputStatus.OK:
-            raise RuntimeError(f'dataframe serialisation failed: {output}')
+        output.raise_for_status()
         return extract_serialised_dataframe(output.text)
 
     def _execute(self, code):
@@ -228,6 +230,24 @@ class Statement:
             time.sleep(interval)
             self.refresh()
             
+    
+    
+class SparkRuntimeError(Exception):
+    
+    def __init__(self, ename, evalue, traceback):
+        self.ename = ename
+        self.evalue = evalue
+        self.traceback = traceback
+        
+    def __repr__(self):
+        name = self.__class__.__name__
+        components = []
+        if self.ename is not None:
+            components.append(f'ename={self.ename!r}')
+        if self.evalue is not None:
+            components.append(f'evalue={self.evalue!r}')
+        return f'{name}({", ".join(components)})'
+        
             
 class OutputStatus(Enum):
     OK = 'ok'
@@ -264,3 +284,7 @@ class Output:
         if self.traceback is not None:
             components.append(f'traceback={self.traceback!r}')
         return f'{name}({", ".join(components)})'
+        
+    def raise_for_status(self):
+        if self.status == OutputStatus.ERROR:
+            raise SparkRuntimeError(self.ename, self.evalue, self.traceback)
