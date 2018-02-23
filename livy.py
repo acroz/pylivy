@@ -236,10 +236,12 @@ class OutputStatus(Enum):
 
 class Output:
     
-    def __init__(self, status, text=None, ename=None, traceback=None):
+    def __init__(self, status, text=None, ename=None, evalue=None,
+                 traceback=None):
         self.status = status
         self.text = text
         self.ename = ename
+        self.evalue = evalue
         self.traceback = traceback
         
     @classmethod
@@ -248,6 +250,7 @@ class Output:
             OutputStatus(data['status']),
             data.get('data', {}).get('text/plain'),
             data.get('ename'),
+            data.get('evalue'),
             data.get('traceback')
         )
         
