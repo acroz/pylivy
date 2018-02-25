@@ -1,7 +1,9 @@
 import time
 import json
 import logging
+import re
 from enum import Enum
+from functools import total_ordering, lru_cache
 
 import requests
 from requests import HTTPError
@@ -94,6 +96,53 @@ class JsonClient:
 
     def _endpoint(self, endpoint):
         return self.url.rstrip('/') + endpoint
+
+
+@total_ordering
+class Version:
+
+    def __init__(self, major, minor, dot, extension=''):
+        self.major = major
+        self.minor = minor
+        self.dot = dot
+        self.extension = extension
+
+    @classmethod
+    def from_string(cls, version):
+        match = re.match(r'(\d+)\.(\d+)\.(\d+)(\S+)$', version)
+        if match is None:
+            raise ValueError(f'invalid version string {version!r}')
+        return cls(*match.groups())
+
+    def __repr__(self):
+        name = self.__class__.__name__
+        return f'{name}({self.major}.{self.minor}.{self.dot}{self.extension})'
+
+    def __eq__(self, other):
+        return (
+            self.major == other.major and
+            self.minor == other.minor and
+            self.dot == other.dot
+        )
+
+    def __lt__(self, other):
+        if self.major < other.major:
+            return True
+        elif self.major == other.major:
+            if self.minor < other.minor:
+                return True
+            elif self.minor == other.minor:
+                return self.dot < other.dot
+            else:
+                return False
+        else:
+            return False
+
+
+@lru_cache()
+def server_version(url):
+    client = JsonClient(url)
+    return Version.from_string(client.get('/version')['version'])
 
 
 class SessionManager:
