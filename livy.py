@@ -43,7 +43,7 @@ class Livy:
         self.close()
 
     def start(self):
-        self.session = self.manager.new()
+        self.session = self.manager.new(SessionKind.PYSPARK)
 
     def close(self):
         self.session.kill()
@@ -145,6 +145,33 @@ def server_version(url):
     return Version.from_string(client.get('/version')['version'])
 
 
+def legacy_server_version(url):
+    return server_version(url) < Version.from_string('0.5.0-incubating')
+
+
+class SessionKind(Enum):
+    SPARK = 'spark'
+    PYSPARK = 'pyspark'
+    PYSPARK3 = 'pyspark3'
+    SPARKR = 'sparkr'
+    SQL = 'sql'
+    SHARED = 'shared'
+
+
+VALID_LEGACY_SESSION_KINDS = {
+    SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.PYSPARK3,
+    SessionKind.SPARKR
+}
+VALID_SESSION_KINDS = {
+    SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.SPARKR,
+    SessionKind.SQL, SessionKind.SHARED
+}
+VALID_STATEMENT_KINDS = {
+    SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.SPARKR,
+    SessionKind.SQL
+}
+
+
 class SessionManager:
 
     def __init__(self, url):
@@ -158,8 +185,13 @@ class SessionManager:
             for data in response['sessions']
         ]
 
-    def new(self, session_type='pyspark'):
-        data = {'kind': session_type}
+    def new(self, kind):
+        valid_kinds = self._valid_session_kinds()
+        if kind not in valid_kinds:
+            raise ValueError(
+                f'{kind} is not a valid session kind (one of {valid_kinds})'
+            )
+        data = {'kind': kind.value}
         response = self._client.post('/sessions', data)
         return Session.from_json(self.url, response)
 
@@ -172,6 +204,12 @@ class SessionManager:
             else:
                 raise
         return Session.from_json(self.url, response)
+
+    def _valid_session_kinds(self):
+        if legacy_server_version(self.url):
+            return VALID_LEGACY_SESSION_KINDS
+        else:
+            return VALID_SESSION_KINDS
 
 
 class SessionState(Enum):
@@ -187,25 +225,38 @@ class SessionState(Enum):
 
 class Session:
 
-    def __init__(self, url, id_, state):
+    def __init__(self, url, id_, kind, state):
         self.url = url
         self.id_ = id_
+        self.kind = kind
         self.state = state
         self._client = JsonClient(f'{url}/sessions/{id_}')
 
     @classmethod
     def from_json(cls, url, data):
-        return cls(url, data['id'], SessionState(data['state']))
+        return cls(
+            url,
+            data['id'],
+            SessionKind(data['kind']),
+            SessionState(data['state'])
+        )
 
     def __repr__(self):
         name = self.__class__.__name__
         return (
             f'{name}(url={self.url!r}, id_={self.id_}, '
-            f'state={self.state})'
+            f'kind={self.kind}, state={self.state})'
         )
 
-    def run_statement(self, code):
-        response = self._client.post('/statements', data={'code': code})
+    def run_statement(self, code, kind=None):
+        data = {'code': code}
+        if kind is not None:
+            if legacy_server_version(self.url):
+                LOGGER.warning('statement kind ignored on Livy<0.5.0')
+            if kind not in VALID_STATEMENT_KINDS:
+                raise ValueError(f'invalid code kind for statement {kind}')
+            data['kind'] = kind.value
+        response = self._client.post('/statements', data=data)
         return Statement.from_json(self.url, self.id_, response)
 
     def get_statements(self):
