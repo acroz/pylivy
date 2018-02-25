@@ -101,18 +101,11 @@ class JsonClient:
 @total_ordering
 class Version:
 
-    def __init__(self, major, minor, dot, extension=''):
-        self.major = major
-        self.minor = minor
-        self.dot = dot
-        self.extension = extension
-
-    @classmethod
-    def from_string(cls, version):
+    def __init__(self, version):
         match = re.match(r'(\d+)\.(\d+)\.(\d+)(\S+)$', version)
         if match is None:
             raise ValueError(f'invalid version string {version!r}')
-        return cls(*match.groups())
+        self.major, self.minor, self.dot, self.extension = match.groups()
 
     def __repr__(self):
         name = self.__class__.__name__
@@ -142,11 +135,11 @@ class Version:
 @lru_cache()
 def server_version(url):
     client = JsonClient(url)
-    return Version.from_string(client.get('/version')['version'])
+    return Version(client.get('/version')['version'])
 
 
 def legacy_server_version(url):
-    return server_version(url) < Version.from_string('0.5.0-incubating')
+    return server_version(url) < Version('0.5.0-incubating')
 
 
 class SessionKind(Enum):
