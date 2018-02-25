@@ -4,7 +4,9 @@ python:
 services:
   - docker
 before_install:
-  - docker run --publish 8998:8998 acroz/livy
+  - docker pull acroz/livy
+  - docker run --publish 8998:8998 acroz/livy &
+  - sleep 10
 script:
   - pip install flake8 .
   - flake8
