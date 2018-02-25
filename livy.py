@@ -152,7 +152,7 @@ class Session:
         name = self.__class__.__name__
         return (
             f'{name}(url={self.url!r}, id_={self.id_}, '
-            f'state={self.state!r})'
+            f'state={self.state})'
         )
 
     def run_statement(self, code):
@@ -220,7 +220,7 @@ class Statement:
         return (
             f'{name}('
             f'url={self.url!r}, session_id={self.session_id}, id_={self.id_}, '
-            f'state={self.state!r}, output={self.output!r})'
+            f'state={self.state}, output={self.output!r})'
         )
 
     def refresh(self):
@@ -286,7 +286,7 @@ class Output:
 
     def __repr__(self):
         name = self.__class__.__name__
-        components = [f'status={self.status!r}']
+        components = [f'status={self.status}']
         if self.text is not None:
             components.append(f'text={self.text!r}')
         if self.ename is not None:
