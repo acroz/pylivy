@@ -20,10 +20,14 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     setup_requires=[
+        'pytest-runner',
         'wheel'
     ],
     install_requires=[
         'requests',
         'pandas'
+    ],
+    tests_require=[
+        'pytest'
     ]
 )

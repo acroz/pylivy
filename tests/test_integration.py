@@ -1,0 +1,22 @@
+import os
+import requests
+from livy import Livy
+
+
+LIVY_URL = os.environ.get('LIVY_TEST_URL', 'http://localhost:8998')
+
+
+def livy_available():
+    try:
+        response = requests.get(LIVY_URL)
+    except ConnectionError as e:
+        return False
+    return response.ok
+
+
+def test_pyspark(capsys):
+    assert livy_available()
+
+    with Livy(LIVY_URL) as client:
+        client.run('print("foo")')
+        assert capsys.readouterr() == ('foo\n', '')
