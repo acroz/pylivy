@@ -27,10 +27,21 @@ def extract_serialised_dataframe(text):
     return pandas.DataFrame(rows)
 
 
+class SessionKind(Enum):
+    SPARK = 'spark'
+    PYSPARK = 'pyspark'
+    PYSPARK3 = 'pyspark3'
+    SPARKR = 'sparkr'
+    SQL = 'sql'
+    SHARED = 'shared'
+
+
 class Livy:
 
-    def __init__(self, url=DEFAULT_URL, echo=True, check=True):
+    def __init__(self, url=DEFAULT_URL, kind=SessionKind.PYSPARK, echo=True,
+                 check=True):
         self.manager = SessionManager(url)
+        self.kind = kind
         self.session = None
         self.echo = echo
         self.check = check
@@ -43,7 +54,7 @@ class Livy:
         self.close()
 
     def start(self):
-        self.session = self.manager.new(SessionKind.PYSPARK)
+        self.session = self.manager.new(self.kind)
 
     def close(self):
         self.session.kill()
@@ -140,15 +151,6 @@ def server_version(url):
 
 def legacy_server_version(url):
     return server_version(url) < Version('0.5.0-incubating')
-
-
-class SessionKind(Enum):
-    SPARK = 'spark'
-    PYSPARK = 'pyspark'
-    PYSPARK3 = 'pyspark3'
-    SPARKR = 'sparkr'
-    SQL = 'sql'
-    SHARED = 'shared'
 
 
 VALID_LEGACY_SESSION_KINDS = {
