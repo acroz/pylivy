@@ -4,6 +4,7 @@ import logging
 from enum import Enum
 
 import requests
+from requests import HTTPError
 import pandas
 
 
@@ -111,6 +112,16 @@ class SessionManager:
     def create_session(self, session_type='pyspark'):
         data = {'kind': session_type}
         response = self._client.post('/sessions', data)
+        return Session.from_json(self.url, response)
+
+    def get_session(self, session_id):
+        try:
+            response = self._client.get(f'/sessions/{session_id}')
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            else:
+                raise
         return Session.from_json(self.url, response)
 
 
