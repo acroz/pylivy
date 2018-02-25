@@ -4,6 +4,7 @@ import logging
 from enum import Enum
 
 import requests
+from requests import HTTPError
 import pandas
 
 
@@ -25,23 +26,23 @@ def extract_serialised_dataframe(text):
 
 
 class Livy:
-    
+
     def __init__(self, url=DEFAULT_URL, echo=True, check=True):
         self.manager = SessionManager(url)
         self.session = None
         self.echo = echo
         self.check = check
-        
+
     def __enter__(self):
         self.start()
         return self
-        
+
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
-        
+
     def start(self):
         self.session = self.manager.create_session()
-        
+
     def close(self):
         self.session.kill()
 
@@ -52,7 +53,7 @@ class Livy:
         if self.check:
             output.raise_for_status()
         return output
-        
+
     def read(self, dataframe_name):
         code = SERIALISE_DATAFRAME_TEMPLATE.format(dataframe_name)
         output = self._execute(code)
@@ -60,55 +61,47 @@ class Livy:
         return extract_serialised_dataframe(output.text)
 
     def _execute(self, code):
-        self._wait_for_session()
+        self.session.wait_until_ready()
         LOGGER.info('Beginning code statement execution')
         statement = self.session.run_statement(code)
-        statement.wait()
+        statement.wait_until_finished()
         LOGGER.info(
             'Completed code statement execution with status '
             f'{statement.output.status}'
         )
         return statement.output
-        
-    def _wait_for_session(self):
-        if not self.session.ready():
-            LOGGER.info('Waiting for session to start')
-            while not self.session.ready():
-                time.sleep(1.0)
-                self.session.refresh()
-            LOGGER.info('Session ready')
 
 
 class JsonClient:
-    
+
     def __init__(self, url):
         self.url = url
-        
+
     def get(self, endpoint=''):
         response = requests.get(self._endpoint(endpoint))
         response.raise_for_status()
         return response.json()
-    
+
     def post(self, endpoint, data=None):
         response = requests.post(self._endpoint(endpoint), json=data)
         response.raise_for_status()
         return response.json()
-        
+
     def delete(self, endpoint=''):
         response = requests.delete(self._endpoint(endpoint))
         response.raise_for_status()
         return response.json()
-        
+
     def _endpoint(self, endpoint):
         return self.url.rstrip('/') + endpoint
-        
-        
+
+
 class SessionManager:
-    
+
     def __init__(self, url):
         self.url = url
         self._client = JsonClient(url)
-        
+
     def list_sessions(self):
         response = self._client.get('/sessions')
         return [
@@ -119,6 +112,16 @@ class SessionManager:
     def create_session(self, session_type='pyspark'):
         data = {'kind': session_type}
         response = self._client.post('/sessions', data)
+        return Session.from_json(self.url, response)
+
+    def get_session(self, session_id):
+        try:
+            response = self._client.get(f'/sessions/{session_id}')
+        except HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            else:
+                raise
         return Session.from_json(self.url, response)
 
 
@@ -134,43 +137,51 @@ class SessionState(Enum):
 
 
 class Session:
-    
+
     def __init__(self, url, id_, state):
         self.url = url
         self.id_ = id_
         self.state = state
         self._client = JsonClient(f'{url}/sessions/{id_}')
-        
+
     @classmethod
     def from_json(cls, url, data):
         return cls(url, data['id'], SessionState(data['state']))
-    
+
     def __repr__(self):
         name = self.__class__.__name__
         return (
             f'{name}(url={self.url!r}, id_={self.id_}, '
             f'state={self.state!r})'
         )
-    
+
     def run_statement(self, code):
         response = self._client.post('/statements', data={'code': code})
         return Statement.from_json(self.url, self.id_, response)
-    
+
     def get_statements(self):
         response = self._client.get('/statements')
         return [
             Statement.from_json(self.url, self.id_, data)
             for data in response['statements']
         ]
-        
+
     def ready(self):
         non_ready_states = {SessionState.NOT_STARTED, SessionState.STARTING}
         return self.state not in non_ready_states
-        
+
     def refresh(self):
         response = self._client.get('/state')
         self.state = SessionState(response['state'])
-    
+
+    def wait_until_ready(self, interval=1.0):
+        if not self.ready():
+            LOGGER.info('Waiting for session to be ready')
+            while not self.ready():
+                time.sleep(interval)
+                self.refresh()
+            LOGGER.info('Session ready')
+
     def kill(self):
         self._client.delete()
 
@@ -182,28 +193,28 @@ class StatementState(Enum):
     ERROR = 'error'
     CANCELLING = 'cancelling'
     CANCELLED = 'cancelled'
-    
+
 
 class Statement:
-    
+
     def __init__(self, url, session_id, id_, state, output):
         self.url = url
         self.session_id = session_id
         self.id_ = id_
         self.state = state
         self.output = output
-        
+
         self._client = JsonClient(
             f'{url}/sessions/{session_id}/statements/{id_}'
         )
-        
+
     @classmethod
     def from_json(cls, url, session_id, data):
         return cls(
             url, session_id,
             data['id'], StatementState(data['state']), data['output']
         )
-    
+
     def __repr__(self):
         name = self.__class__.__name__
         return (
@@ -211,34 +222,33 @@ class Statement:
             f'url={self.url!r}, session_id={self.session_id}, id_={self.id_}, '
             f'state={self.state!r}, output={self.output!r})'
         )
-    
+
     def refresh(self):
         response = self._client.get()
-        
+
         if response['id'] != self.id_:
             raise RuntimeError('mismatched ids')
-            
+
         self.state = StatementState(response['state'])
-        
+
         if response['output'] is None:
             self.output = None
         else:
             self.output = Output.from_json(response['output'])
-        
-    def wait(self, interval=1.0):
+
+    def wait_until_finished(self, interval=1.0):
         while self.state in {StatementState.WAITING, StatementState.RUNNING}:
             time.sleep(interval)
             self.refresh()
-            
-    
-    
+
+
 class SparkRuntimeError(Exception):
-    
+
     def __init__(self, ename, evalue, traceback):
         self.ename = ename
         self.evalue = evalue
         self.traceback = traceback
-        
+
     def __repr__(self):
         name = self.__class__.__name__
         components = []
@@ -247,15 +257,15 @@ class SparkRuntimeError(Exception):
         if self.evalue is not None:
             components.append(f'evalue={self.evalue!r}')
         return f'{name}({", ".join(components)})'
-        
-            
+
+
 class OutputStatus(Enum):
     OK = 'ok'
     ERROR = 'error'
 
 
 class Output:
-    
+
     def __init__(self, status, text=None, ename=None, evalue=None,
                  traceback=None):
         self.status = status
@@ -263,7 +273,7 @@ class Output:
         self.ename = ename
         self.evalue = evalue
         self.traceback = traceback
-        
+
     @classmethod
     def from_json(cls, data):
         return cls(
@@ -273,7 +283,7 @@ class Output:
             data.get('evalue'),
             data.get('traceback')
         )
-        
+
     def __repr__(self):
         name = self.__class__.__name__
         components = [f'status={self.status!r}']
@@ -284,7 +294,7 @@ class Output:
         if self.traceback is not None:
             components.append(f'traceback={self.traceback!r}')
         return f'{name}({", ".join(components)})'
-        
+
     def raise_for_status(self):
         if self.status == OutputStatus.ERROR:
             raise SparkRuntimeError(self.ename, self.evalue, self.traceback)
