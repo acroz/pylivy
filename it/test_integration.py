@@ -16,7 +16,7 @@ def livy_available():
 
 
 def session_stopped(session_id):
-    session = SessionManager(LIVY_URL).get_session(session_id)
+    session = SessionManager(LIVY_URL).get(session_id)
     if session is None:
         return True
     else:

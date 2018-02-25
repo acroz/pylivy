@@ -41,7 +41,7 @@ class Livy:
         self.close()
 
     def start(self):
-        self.session = self.manager.create_session()
+        self.session = self.manager.new()
 
     def close(self):
         self.session.kill()
@@ -102,19 +102,19 @@ class SessionManager:
         self.url = url
         self._client = JsonClient(url)
 
-    def list_sessions(self):
+    def list(self):
         response = self._client.get('/sessions')
         return [
             Session.from_json(self.url, data)
             for data in response['sessions']
         ]
 
-    def create_session(self, session_type='pyspark'):
+    def new(self, session_type='pyspark'):
         data = {'kind': session_type}
         response = self._client.post('/sessions', data)
         return Session.from_json(self.url, response)
 
-    def get_session(self, session_id):
+    def get(self, session_id):
         try:
             response = self._client.get(f'/sessions/{session_id}')
         except HTTPError as e:
