@@ -1,6 +1,7 @@
 import os
 import requests
-from livy import Livy
+import pytest
+from livy import Livy, SparkRuntimeError
 
 
 LIVY_URL = os.environ.get('LIVY_TEST_URL', 'http://localhost:8998')
@@ -30,3 +31,6 @@ def test_pyspark(capsys):
         client.run(PYSPARK_CREATE_DF)
         client.run('df.count()')
         assert capsys.readouterr() == ('100\n', '')
+
+        with pytest.raises(SparkRuntimeError):
+            client.run('1 / 0')
