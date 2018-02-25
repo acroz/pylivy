@@ -3,3 +3,4 @@ __pycache__/
 build/
 dist/
 livy.egg-info/
+.pytest_cache/
