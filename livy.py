@@ -306,8 +306,8 @@ class Statement:
     @classmethod
     def from_json(cls, url, session_id, data):
         return cls(
-            url, session_id,
-            data['id'], StatementState(data['state']), data['output']
+            url, session_id, data['id'], StatementState(data['state']),
+            Output.from_json(data['output'])
         )
 
     def __repr__(self):
@@ -325,11 +325,7 @@ class Statement:
             raise RuntimeError('mismatched ids')
 
         self.state = StatementState(response['state'])
-
-        if response['output'] is None:
-            self.output = None
-        else:
-            self.output = Output.from_json(response['output'])
+        self.output = Output.from_json(response['output'])
 
     def wait_until_finished(self, interval=1.0):
         while self.state in {StatementState.WAITING, StatementState.RUNNING}:
@@ -371,6 +367,8 @@ class Output:
 
     @classmethod
     def from_json(cls, data):
+        if data is None:
+            return None
         return cls(
             OutputStatus(data['status']),
             data.get('data', {}).get('text/plain'),
