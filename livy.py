@@ -357,10 +357,11 @@ class OutputStatus(Enum):
 
 class Output:
 
-    def __init__(self, status, text=None, ename=None, evalue=None,
+    def __init__(self, status, text=None, json=None, ename=None, evalue=None,
                  traceback=None):
         self.status = status
         self.text = text
+        self.json = json
         self.ename = ename
         self.evalue = evalue
         self.traceback = traceback
@@ -372,6 +373,7 @@ class Output:
         return cls(
             OutputStatus(data['status']),
             data.get('data', {}).get('text/plain'),
+            data.get('data', {}).get('application/json'),
             data.get('ename'),
             data.get('evalue'),
             data.get('traceback')
@@ -382,8 +384,12 @@ class Output:
         components = [f'status={self.status}']
         if self.text is not None:
             components.append(f'text={self.text!r}')
+        if self.json is not None:
+            components.append(f'json={self.json!r}')
         if self.ename is not None:
             components.append(f'ename={self.ename!r}')
+        if self.evalue is not None:
+            components.append(f'evalue={self.evalue!r}')
         if self.traceback is not None:
             components.append(f'traceback={self.traceback!r}')
         return f'{name}({", ".join(components)})'
