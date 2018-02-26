@@ -27,7 +27,8 @@ cat(unlist(collect(toJSON({}))), sep = '\n')
 def extract_serialised_dataframe(text):
     rows = []
     for line in text.split('\n'):
-        rows.append(json.loads(line))
+        if line:
+            rows.append(json.loads(line))
     return pandas.DataFrame(rows)
 
 
