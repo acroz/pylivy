@@ -110,3 +110,26 @@ def test_sparkr(capsys):
         session_id = client.session.id_
 
     assert session_stopped(session_id)
+
+
+SQL_CREATE_VIEW = """
+CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
+"""
+
+
+def test_sql():
+
+    assert livy_available()
+
+    with Livy(LIVY_URL, kind=SessionKind.SQL) as client:
+
+        client.run(SQL_CREATE_VIEW)
+        output = client.run('SELECT COUNT(*) FROM view')
+        assert output.json['data'] == [[100]]
+
+        with pytest.raises(SparkRuntimeError):
+            client.run('not valid SQL!')
+
+        session_id = client.session.id_
+
+    assert session_stopped(session_id)
