@@ -1,5 +1,6 @@
 import os
 import requests
+import pandas
 import pytest
 from livy import (
     Livy, SessionKind, SessionManager, SessionState, SparkRuntimeError
@@ -28,7 +29,7 @@ def session_stopped(session_id):
 SPARK_CREATE_DF = """
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
-val rdd = sc.parallelize(1 to 100)
+val rdd = sc.parallelize(0 to 99)
 val schema = StructType(List(
     StructField("value", IntegerType, nullable = false)
 ))
@@ -53,6 +54,9 @@ def test_spark(capsys):
 
         with pytest.raises(SparkRuntimeError):
             client.run('1 / 0')
+
+        expected = pandas.DataFrame({'value': range(100)})
+        assert client.read('df').equals(expected)
 
         session_id = client.session.id_
 
@@ -81,13 +85,16 @@ def test_pyspark(capsys):
         with pytest.raises(SparkRuntimeError):
             client.run('1 / 0')
 
+        expected = pandas.DataFrame({'value': range(100)})
+        assert client.read('df').equals(expected)
+
         session_id = client.session.id_
 
     assert session_stopped(session_id)
 
 
 SPARKR_CREATE_DF = """
-df <- createDataFrame(data.frame(value = 1:100))
+df <- createDataFrame(data.frame(value = 0:99))
 """
 
 
@@ -106,6 +113,9 @@ def test_sparkr(capsys):
 
         with pytest.raises(SparkRuntimeError):
             client.run('missing_function()')
+
+        expected = pandas.DataFrame({'value': range(100)})
+        assert client.read('df').equals(expected)
 
         session_id = client.session.id_
 
