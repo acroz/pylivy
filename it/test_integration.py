@@ -25,6 +25,40 @@ def session_stopped(session_id):
         return session.state == SessionState.SHUTTING_DOWN
 
 
+SPARK_CREATE_DF = """
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types._
+val rdd = sc.parallelize(1 to 100)
+val schema = StructType(List(
+    StructField("value", IntegerType, nullable = false)
+))
+val df = spark.createDataFrame(rdd.map { i => Row(i) }, schema)
+"""
+
+
+def test_spark(capsys):
+
+    assert livy_available()
+
+    with Livy(LIVY_URL, kind=SessionKind.SPARK) as client:
+
+        client.run('println("foo")')
+        assert capsys.readouterr() == ('foo\n\n', '')
+
+        client.run(SPARK_CREATE_DF)
+        capsys.readouterr()
+
+        client.run('df.count()')
+        assert capsys.readouterr() == ('res1: Long = 100\n\n', '')
+
+        with pytest.raises(SparkRuntimeError):
+            client.run('1 / 0')
+
+        session_id = client.session.id_
+
+    assert session_stopped(session_id)
+
+
 PYSPARK_CREATE_DF = """
 from pyspark.sql import Row
 df = spark.createDataFrame([Row(value=i) for i in range(100)])
