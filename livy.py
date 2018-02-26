@@ -14,16 +14,21 @@ LOGGER = logging.getLogger(__name__)
 
 DEFAULT_URL = 'http://localhost:8998'
 
-SERIALISE_DATAFRAME_TEMPLATE = """
+SERIALISE_DATAFRAME_TEMPLATE_SPARK = '{}.toJSON.collect.foreach(println)'
+SERIALISE_DATAFRAME_TEMPLATE_PYSPARK = """
 for _livy_client_serialised_row in {}.toJSON().collect():
     print(_livy_client_serialised_row)
+"""
+SERIALISE_DATAFRAME_TEMPLATE_SPARKR = r"""
+cat(unlist(collect(toJSON({}))), sep = '\n')
 """
 
 
 def extract_serialised_dataframe(text):
     rows = []
     for line in text.split('\n'):
-        rows.append(json.loads(line))
+        if line:
+            rows.append(json.loads(line))
     return pandas.DataFrame(rows)
 
 
@@ -68,9 +73,22 @@ class Livy:
         return output
 
     def read(self, dataframe_name):
-        code = SERIALISE_DATAFRAME_TEMPLATE.format(dataframe_name)
+
+        try:
+            template = {
+                SessionKind.SPARK: SERIALISE_DATAFRAME_TEMPLATE_SPARK,
+                SessionKind.PYSPARK: SERIALISE_DATAFRAME_TEMPLATE_PYSPARK,
+                SessionKind.SPARKR: SERIALISE_DATAFRAME_TEMPLATE_SPARKR
+            }[self.kind]
+        except KeyError:
+            raise RuntimeError(
+                f'read not supported for sessions of kind {self.kind}'
+            )
+
+        code = template.format(dataframe_name)
         output = self._execute(code)
         output.raise_for_status()
+
         return extract_serialised_dataframe(output.text)
 
     def _execute(self, code):
