@@ -1,7 +1,9 @@
 import time
 import json
 import logging
+import re
 from enum import Enum
+from functools import total_ordering, lru_cache
 
 import requests
 from requests import HTTPError
@@ -25,10 +27,21 @@ def extract_serialised_dataframe(text):
     return pandas.DataFrame(rows)
 
 
+class SessionKind(Enum):
+    SPARK = 'spark'
+    PYSPARK = 'pyspark'
+    PYSPARK3 = 'pyspark3'
+    SPARKR = 'sparkr'
+    SQL = 'sql'
+    SHARED = 'shared'
+
+
 class Livy:
 
-    def __init__(self, url=DEFAULT_URL, echo=True, check=True):
+    def __init__(self, url=DEFAULT_URL, kind=SessionKind.PYSPARK, echo=True,
+                 check=True):
         self.manager = SessionManager(url)
+        self.kind = kind
         self.session = None
         self.echo = echo
         self.check = check
@@ -41,7 +54,7 @@ class Livy:
         self.close()
 
     def start(self):
-        self.session = self.manager.create_session()
+        self.session = self.manager.new(self.kind)
 
     def close(self):
         self.session.kill()
@@ -96,25 +109,88 @@ class JsonClient:
         return self.url.rstrip('/') + endpoint
 
 
+@total_ordering
+class Version:
+
+    def __init__(self, version):
+        match = re.match(r'(\d+)\.(\d+)\.(\d+)(\S+)$', version)
+        if match is None:
+            raise ValueError(f'invalid version string {version!r}')
+        self.major, self.minor, self.dot, self.extension = match.groups()
+
+    def __repr__(self):
+        name = self.__class__.__name__
+        return f'{name}({self.major}.{self.minor}.{self.dot}{self.extension})'
+
+    def __eq__(self, other):
+        return (
+            self.major == other.major and
+            self.minor == other.minor and
+            self.dot == other.dot
+        )
+
+    def __lt__(self, other):
+        if self.major < other.major:
+            return True
+        elif self.major == other.major:
+            if self.minor < other.minor:
+                return True
+            elif self.minor == other.minor:
+                return self.dot < other.dot
+            else:
+                return False
+        else:
+            return False
+
+
+@lru_cache()
+def server_version(url):
+    client = JsonClient(url)
+    return Version(client.get('/version')['version'])
+
+
+def legacy_server_version(url):
+    return server_version(url) < Version('0.5.0-incubating')
+
+
+VALID_LEGACY_SESSION_KINDS = {
+    SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.PYSPARK3,
+    SessionKind.SPARKR
+}
+VALID_SESSION_KINDS = {
+    SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.SPARKR,
+    SessionKind.SQL, SessionKind.SHARED
+}
+VALID_STATEMENT_KINDS = {
+    SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.SPARKR,
+    SessionKind.SQL
+}
+
+
 class SessionManager:
 
     def __init__(self, url):
         self.url = url
         self._client = JsonClient(url)
 
-    def list_sessions(self):
+    def list(self):
         response = self._client.get('/sessions')
         return [
             Session.from_json(self.url, data)
             for data in response['sessions']
         ]
 
-    def create_session(self, session_type='pyspark'):
-        data = {'kind': session_type}
+    def new(self, kind):
+        valid_kinds = self._valid_session_kinds()
+        if kind not in valid_kinds:
+            raise ValueError(
+                f'{kind} is not a valid session kind (one of {valid_kinds})'
+            )
+        data = {'kind': kind.value}
         response = self._client.post('/sessions', data)
         return Session.from_json(self.url, response)
 
-    def get_session(self, session_id):
+    def get(self, session_id):
         try:
             response = self._client.get(f'/sessions/{session_id}')
         except HTTPError as e:
@@ -123,6 +199,12 @@ class SessionManager:
             else:
                 raise
         return Session.from_json(self.url, response)
+
+    def _valid_session_kinds(self):
+        if legacy_server_version(self.url):
+            return VALID_LEGACY_SESSION_KINDS
+        else:
+            return VALID_SESSION_KINDS
 
 
 class SessionState(Enum):
@@ -138,25 +220,38 @@ class SessionState(Enum):
 
 class Session:
 
-    def __init__(self, url, id_, state):
+    def __init__(self, url, id_, kind, state):
         self.url = url
         self.id_ = id_
+        self.kind = kind
         self.state = state
         self._client = JsonClient(f'{url}/sessions/{id_}')
 
     @classmethod
     def from_json(cls, url, data):
-        return cls(url, data['id'], SessionState(data['state']))
+        return cls(
+            url,
+            data['id'],
+            SessionKind(data['kind']),
+            SessionState(data['state'])
+        )
 
     def __repr__(self):
         name = self.__class__.__name__
         return (
             f'{name}(url={self.url!r}, id_={self.id_}, '
-            f'state={self.state!r})'
+            f'kind={self.kind}, state={self.state})'
         )
 
-    def run_statement(self, code):
-        response = self._client.post('/statements', data={'code': code})
+    def run_statement(self, code, kind=None):
+        data = {'code': code}
+        if kind is not None:
+            if legacy_server_version(self.url):
+                LOGGER.warning('statement kind ignored on Livy<0.5.0')
+            if kind not in VALID_STATEMENT_KINDS:
+                raise ValueError(f'invalid code kind for statement {kind}')
+            data['kind'] = kind.value
+        response = self._client.post('/statements', data=data)
         return Statement.from_json(self.url, self.id_, response)
 
     def get_statements(self):
@@ -211,8 +306,8 @@ class Statement:
     @classmethod
     def from_json(cls, url, session_id, data):
         return cls(
-            url, session_id,
-            data['id'], StatementState(data['state']), data['output']
+            url, session_id, data['id'], StatementState(data['state']),
+            Output.from_json(data['output'])
         )
 
     def __repr__(self):
@@ -220,7 +315,7 @@ class Statement:
         return (
             f'{name}('
             f'url={self.url!r}, session_id={self.session_id}, id_={self.id_}, '
-            f'state={self.state!r}, output={self.output!r})'
+            f'state={self.state}, output={self.output!r})'
         )
 
     def refresh(self):
@@ -230,11 +325,7 @@ class Statement:
             raise RuntimeError('mismatched ids')
 
         self.state = StatementState(response['state'])
-
-        if response['output'] is None:
-            self.output = None
-        else:
-            self.output = Output.from_json(response['output'])
+        self.output = Output.from_json(response['output'])
 
     def wait_until_finished(self, interval=1.0):
         while self.state in {StatementState.WAITING, StatementState.RUNNING}:
@@ -266,19 +357,23 @@ class OutputStatus(Enum):
 
 class Output:
 
-    def __init__(self, status, text=None, ename=None, evalue=None,
+    def __init__(self, status, text=None, json=None, ename=None, evalue=None,
                  traceback=None):
         self.status = status
         self.text = text
+        self.json = json
         self.ename = ename
         self.evalue = evalue
         self.traceback = traceback
 
     @classmethod
     def from_json(cls, data):
+        if data is None:
+            return None
         return cls(
             OutputStatus(data['status']),
             data.get('data', {}).get('text/plain'),
+            data.get('data', {}).get('application/json'),
             data.get('ename'),
             data.get('evalue'),
             data.get('traceback')
@@ -286,11 +381,15 @@ class Output:
 
     def __repr__(self):
         name = self.__class__.__name__
-        components = [f'status={self.status!r}']
+        components = [f'status={self.status}']
         if self.text is not None:
             components.append(f'text={self.text!r}')
+        if self.json is not None:
+            components.append(f'json={self.json!r}')
         if self.ename is not None:
             components.append(f'ename={self.ename!r}')
+        if self.evalue is not None:
+            components.append(f'evalue={self.evalue!r}')
         if self.traceback is not None:
             components.append(f'traceback={self.traceback!r}')
         return f'{name}({", ".join(components)})'
