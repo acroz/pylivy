@@ -7,7 +7,7 @@ import pandas
 
 from livy import (
     Livy, JsonClient, SessionKind, SessionManager, SessionState,
-    SparkRuntimeError
+    SparkRuntimeError, run_sync
 )
 
 
@@ -20,25 +20,13 @@ async def livy_available():
             return response.status == 200
 
 
-def livy_available_sync():
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(asyncio.ensure_future(livy_available()))
-
-
 async def session_stopped(session_id):
-    client = JsonClient(LIVY_URL)
-    session = await SessionManager(client).get(session_id)
-    if session is None:
-        return True
-    else:
-        return session.state == SessionState.SHUTTING_DOWN
-
-
-def session_stopped_sync(session_id):
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        asyncio.ensure_future(session_stopped(session_id))
-    )
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f'{LIVY_URL}/session/{session_id}') as response:
+            if response.status == 404:
+                return True
+            else:
+                return response.json()['state'] == 'shutting_down'
 
 
 SPARK_CREATE_DF = """
@@ -54,7 +42,7 @@ val df = spark.createDataFrame(rdd.map { i => Row(i) }, schema)
 
 def test_spark(capsys):
 
-    assert livy_available_sync()
+    assert run_sync(livy_available())
 
     with Livy(LIVY_URL, kind=SessionKind.SPARK) as client:
 
@@ -75,7 +63,7 @@ def test_spark(capsys):
 
         session_id = client.session.id_
 
-    assert session_stopped_sync(session_id)
+    assert run_sync(session_stopped(session_id))
 
 
 PYSPARK_CREATE_DF = """
@@ -86,7 +74,7 @@ df = spark.createDataFrame([Row(value=i) for i in range(100)])
 
 def test_pyspark(capsys):
 
-    assert livy_available_sync()
+    assert run_sync(livy_available())
 
     with Livy(LIVY_URL, kind=SessionKind.PYSPARK) as client:
 
@@ -105,7 +93,7 @@ def test_pyspark(capsys):
 
         session_id = client.session.id_
 
-    assert session_stopped_sync(session_id)
+    assert run_sync(session_stopped(session_id))
 
 
 SPARKR_CREATE_DF = """
@@ -115,7 +103,7 @@ df <- createDataFrame(data.frame(value = 0:99))
 
 def test_sparkr(capsys):
 
-    assert livy_available_sync()
+    assert run_sync(livy_available())
 
     with Livy(LIVY_URL, kind=SessionKind.SPARKR) as client:
 
@@ -134,7 +122,7 @@ def test_sparkr(capsys):
 
         session_id = client.session.id_
 
-    assert session_stopped_sync(session_id)
+    assert run_sync(session_stopped(session_id))
 
 
 SQL_CREATE_VIEW = """
@@ -144,7 +132,7 @@ CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
 
 def test_sql():
 
-    assert livy_available_sync()
+    assert run_sync(livy_available())
 
     with Livy(LIVY_URL, kind=SessionKind.SQL) as client:
 
@@ -157,4 +145,4 @@ def test_sql():
 
         session_id = client.session.id_
 
-    assert session_stopped_sync(session_id)
+    assert run_sync(session_stopped(session_id))
