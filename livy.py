@@ -23,6 +23,11 @@ cat(unlist(collect(toJSON({}))), sep = '\n')
 """
 
 
+def run_sync(coroutine):
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(asyncio.ensure_future(coroutine))
+
+
 def extract_serialised_dataframe(text):
     rows = []
     for line in text.split('\n'):
@@ -44,7 +49,13 @@ class Livy:
 
     def __init__(self, url=DEFAULT_URL, kind=SessionKind.PYSPARK, echo=True,
                  check=True):
-        self._client = JsonClient(url)
+
+        async def new_session():
+            return aiohttp.ClientSession()
+
+        http_session = run_sync(new_session())
+        self._client = JsonClient(http_session, url)
+
         self.manager = SessionManager(self._client)
         self.kind = kind
         self.session = None
@@ -124,9 +135,9 @@ class Livy:
 
 class JsonClient:
 
-    def __init__(self, url):
+    def __init__(self, session, url):
         self.url = url
-        self._http_session = aiohttp.ClientSession()
+        self._http_session = session
         self._server_version_cache = None
 
     async def close(self):
