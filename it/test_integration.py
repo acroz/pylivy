@@ -1,29 +1,44 @@
 import os
-import requests
-import pandas
+import asyncio
+
 import pytest
+import aiohttp
+import pandas
+
 from livy import (
-    Livy, SessionKind, SessionManager, SessionState, SparkRuntimeError
+    Livy, JsonClient, SessionKind, SessionManager, SessionState,
+    SparkRuntimeError
 )
 
 
 LIVY_URL = os.environ.get('LIVY_TEST_URL', 'http://localhost:8998')
 
 
-def livy_available():
-    try:
-        response = requests.get(LIVY_URL)
-    except ConnectionError as e:
-        return False
-    return response.ok
+async def livy_available():
+    async with aiohttp.ClientSession() as session:
+        async with session.get(LIVY_URL) as response:
+            return response.status == 200
 
 
-def session_stopped(session_id):
-    session = SessionManager(LIVY_URL).get(session_id)
+def livy_available_sync():
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(asyncio.ensure_future(livy_available()))
+
+
+async def session_stopped(session_id):
+    client = JsonClient(LIVY_URL)
+    session = await SessionManager(client).get(session_id)
     if session is None:
         return True
     else:
         return session.state == SessionState.SHUTTING_DOWN
+
+
+def session_stopped_sync(session_id):
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(
+        asyncio.ensure_future(session_stopped(session_id))
+    )
 
 
 SPARK_CREATE_DF = """
@@ -39,7 +54,7 @@ val df = spark.createDataFrame(rdd.map { i => Row(i) }, schema)
 
 def test_spark(capsys):
 
-    assert livy_available()
+    assert livy_available_sync()
 
     with Livy(LIVY_URL, kind=SessionKind.SPARK) as client:
 
@@ -60,7 +75,7 @@ def test_spark(capsys):
 
         session_id = client.session.id_
 
-    assert session_stopped(session_id)
+    assert session_stopped_sync(session_id)
 
 
 PYSPARK_CREATE_DF = """
@@ -71,7 +86,7 @@ df = spark.createDataFrame([Row(value=i) for i in range(100)])
 
 def test_pyspark(capsys):
 
-    assert livy_available()
+    assert livy_available_sync()
 
     with Livy(LIVY_URL, kind=SessionKind.PYSPARK) as client:
 
@@ -90,7 +105,7 @@ def test_pyspark(capsys):
 
         session_id = client.session.id_
 
-    assert session_stopped(session_id)
+    assert session_stopped_sync(session_id)
 
 
 SPARKR_CREATE_DF = """
@@ -100,7 +115,7 @@ df <- createDataFrame(data.frame(value = 0:99))
 
 def test_sparkr(capsys):
 
-    assert livy_available()
+    assert livy_available_sync()
 
     with Livy(LIVY_URL, kind=SessionKind.SPARKR) as client:
 
@@ -119,7 +134,7 @@ def test_sparkr(capsys):
 
         session_id = client.session.id_
 
-    assert session_stopped(session_id)
+    assert session_stopped_sync(session_id)
 
 
 SQL_CREATE_VIEW = """
@@ -129,7 +144,7 @@ CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
 
 def test_sql():
 
-    assert livy_available()
+    assert livy_available_sync()
 
     with Livy(LIVY_URL, kind=SessionKind.SQL) as client:
 
@@ -142,4 +157,4 @@ def test_sql():
 
         session_id = client.session.id_
 
-    assert session_stopped(session_id)
+    assert session_stopped_sync(session_id)
