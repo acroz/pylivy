@@ -160,7 +160,7 @@ CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
 """
 
 
-def test_sql():
+def test_sql_session_sync():
 
     assert run_sync(livy_available())
 
@@ -176,3 +176,22 @@ def test_sql():
         session_id = session.session_id
 
     assert run_sync(session_stopped(session_id))
+
+
+@pytest.mark.asyncio
+async def test_sql_session_async():
+
+    assert await livy_available()
+
+    async with AsyncLivySession(LIVY_URL, kind=SessionKind.SQL) as session:
+
+        await session.run(SQL_CREATE_VIEW)
+        output = await session.run('SELECT COUNT(*) FROM view')
+        assert output.json['data'] == [[100]]
+
+        with pytest.raises(SparkRuntimeError):
+            await session.run('not valid SQL!')
+
+        session_id = session.session_id
+
+    assert await session_stopped(session_id)
