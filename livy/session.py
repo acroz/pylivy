@@ -24,12 +24,26 @@ cat(unlist(collect(toJSON({}))), sep = '\n')
 """
 
 
+def serialise_dataframe_code(dataframe_name, session_kind):
+    try:
+        template = {
+            SessionKind.SPARK: SERIALISE_DATAFRAME_TEMPLATE_SPARK,
+            SessionKind.PYSPARK: SERIALISE_DATAFRAME_TEMPLATE_PYSPARK,
+            SessionKind.SPARKR: SERIALISE_DATAFRAME_TEMPLATE_SPARKR
+        }[session_kind]
+    except KeyError:
+        raise RuntimeError(
+            f'read not supported for sessions of kind {session_kind}'
+        )
+    return template.format(dataframe_name)
+
+
 def run_sync(coroutine):
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(asyncio.ensure_future(coroutine))
 
 
-def extract_serialised_dataframe(text):
+def deserialise_dataframe(text):
     rows = []
     for line in text.split('\n'):
         if line:
@@ -60,7 +74,7 @@ async def wait_until_statement_finished(client, session_id, statement_id,
         await asyncio.sleep(interval)
 
 
-class LivySession:
+class BaseLivySession:
 
     def __init__(self, url, kind=SessionKind.PYSPARK, echo=True, check=True):
         self.client = LivyClient(url)
@@ -69,51 +83,9 @@ class LivySession:
         self.echo = echo
         self.check = check
 
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.close()
-
-    def start(self):
-        session = run_sync(self.client.create_session(self.kind))
-        self.session_id = session.session_id
-
-    def close(self):
-
-        async def _close():
-            await self.client.delete_session(self.session_id)
-            await self.client.close()
-
-        run_sync(_close())
-
-    def run(self, code):
-        output = run_sync(self._execute(code))
-        if self.echo and output.text:
-            print(output.text)
-        if self.check:
-            output.raise_for_status()
-        return output
-
-    def read(self, dataframe_name):
-
-        try:
-            template = {
-                SessionKind.SPARK: SERIALISE_DATAFRAME_TEMPLATE_SPARK,
-                SessionKind.PYSPARK: SERIALISE_DATAFRAME_TEMPLATE_PYSPARK,
-                SessionKind.SPARKR: SERIALISE_DATAFRAME_TEMPLATE_SPARKR
-            }[self.kind]
-        except KeyError:
-            raise RuntimeError(
-                f'read not supported for sessions of kind {self.kind}'
-            )
-
-        code = template.format(dataframe_name)
-        output = run_sync(self._execute(code))
-        output.raise_for_status()
-
-        return extract_serialised_dataframe(output.text)
+    async def _close(self):
+        await self.client.delete_session(self.session_id)
+        await self.client.close()
 
     async def _execute(self, code):
         await wait_until_session_ready(self.client, self.session_id)
@@ -130,3 +102,65 @@ class LivySession:
             f'{statement.output.status}'
         )
         return statement.output
+
+
+class LivySession(BaseLivySession):
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
+
+    def start(self):
+        session = run_sync(self.client.create_session(self.kind))
+        self.session_id = session.session_id
+
+    def close(self):
+        run_sync(self._close())
+
+    def run(self, code):
+        output = run_sync(self._execute(code))
+        if self.echo and output.text:
+            print(output.text)
+        if self.check:
+            output.raise_for_status()
+        return output
+
+    def read(self, dataframe_name):
+        code = serialise_dataframe_code(dataframe_name, self.kind)
+        output = run_sync(self._execute(code))
+        output.raise_for_status()
+        return deserialise_dataframe(output.text)
+
+
+class AsyncLivySession(BaseLivySession):
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.close()
+
+    async def start(self):
+        session = await self.client.create_session(self.kind)
+        self.session_id = session.session_id
+
+    async def close(self):
+        await self._close()
+
+    async def run(self, code):
+        output = await self._execute(code)
+        if self.echo and output.text:
+            print(output.text)
+        if self.check:
+            output.raise_for_status()
+        return output
+
+    async def read(self, dataframe_name):
+        code = serialise_dataframe_code(dataframe_name, self.kind)
+        output = await self._execute(code)
+        output.raise_for_status()
+        return deserialise_dataframe(output.text)

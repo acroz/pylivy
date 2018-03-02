@@ -1,10 +1,11 @@
 import os
+from collections import namedtuple
 
 import pytest
 import aiohttp
 import pandas
 
-from livy import LivySession, SessionKind, SparkRuntimeError
+from livy import LivySession, AsyncLivySession, SessionKind, SparkRuntimeError
 from livy.session import run_sync
 
 
@@ -26,6 +27,19 @@ async def session_stopped(session_id):
                 return response.json()['state'] == 'shutting_down'
 
 
+TestParameters = namedtuple(
+    'TestParameters',
+    [
+        'print_foo_code',
+        'print_foo_output',
+        'create_dataframe_code',
+        'dataframe_count_code',
+        'dataframe_count_output',
+        'error_code'
+    ]
+)
+
+
 SPARK_CREATE_DF = """
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
@@ -37,30 +51,14 @@ val df = spark.createDataFrame(rdd.map { i => Row(i) }, schema)
 """
 
 
-def test_spark(capsys):
-
-    assert run_sync(livy_available())
-
-    with LivySession(LIVY_URL, kind=SessionKind.SPARK) as session:
-
-        session.run('println("foo")')
-        assert capsys.readouterr() == ('foo\n\n', '')
-
-        session.run(SPARK_CREATE_DF)
-        capsys.readouterr()
-
-        session.run('df.count()')
-        assert capsys.readouterr() == ('res1: Long = 100\n\n', '')
-
-        with pytest.raises(SparkRuntimeError):
-            session.run('1 / 0')
-
-        expected = pandas.DataFrame({'value': range(100)})
-        assert session.read('df').equals(expected)
-
-        session_id = session.session_id
-
-    assert run_sync(session_stopped(session_id))
+SPARK_TEST_PARAMETERS = TestParameters(
+    print_foo_code='println("foo")',
+    print_foo_output='foo\n\n',
+    create_dataframe_code=SPARK_CREATE_DF,
+    dataframe_count_code='df.count()',
+    dataframe_count_output='res1: Long = 100\n\n',
+    error_code='1 / 0'
+)
 
 
 PYSPARK_CREATE_DF = """
@@ -69,28 +67,14 @@ df = spark.createDataFrame([Row(value=i) for i in range(100)])
 """
 
 
-def test_pyspark(capsys):
-
-    assert run_sync(livy_available())
-
-    with LivySession(LIVY_URL, kind=SessionKind.PYSPARK) as session:
-
-        session.run('print("foo")')
-        assert capsys.readouterr() == ('foo\n', '')
-
-        session.run(PYSPARK_CREATE_DF)
-        session.run('df.count()')
-        assert capsys.readouterr() == ('100\n', '')
-
-        with pytest.raises(SparkRuntimeError):
-            session.run('1 / 0')
-
-        expected = pandas.DataFrame({'value': range(100)})
-        assert session.read('df').equals(expected)
-
-        session_id = session.session_id
-
-    assert run_sync(session_stopped(session_id))
+PYSPARK_TEST_PARAMETERS = TestParameters(
+    print_foo_code='print("foo")',
+    print_foo_output='foo\n',
+    create_dataframe_code=PYSPARK_CREATE_DF,
+    dataframe_count_code='df.count()',
+    dataframe_count_output='100\n',
+    error_code='1 / 0'
+)
 
 
 SPARKR_CREATE_DF = """
@@ -98,21 +82,38 @@ df <- createDataFrame(data.frame(value = 0:99))
 """
 
 
-def test_sparkr(capsys):
+SPARKR_TEST_PARAMETERS = TestParameters(
+    print_foo_code='print("foo")',
+    print_foo_output='[1] "foo"\n',
+    create_dataframe_code=SPARKR_CREATE_DF,
+    dataframe_count_code='count(df)',
+    dataframe_count_output='[1] 100\n',
+    error_code='missing_function()'
+)
+
+
+@pytest.mark.parametrize('session_kind, params', [
+    (SessionKind.SPARK, SPARK_TEST_PARAMETERS),
+    (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
+    (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
+])
+def test_session_sync(capsys, session_kind, params):
 
     assert run_sync(livy_available())
 
-    with LivySession(LIVY_URL, kind=SessionKind.SPARKR) as session:
+    with LivySession(LIVY_URL, kind=session_kind) as session:
 
-        session.run('print("foo")')
-        assert capsys.readouterr() == ('[1] "foo"\n', '')
+        session.run(params.print_foo_code)
+        assert capsys.readouterr() == (params.print_foo_output, '')
 
-        session.run(SPARKR_CREATE_DF)
-        session.run('count(df)')
-        assert capsys.readouterr() == ('[1] 100\n', '')
+        session.run(params.create_dataframe_code)
+        capsys.readouterr()
+
+        session.run(params.dataframe_count_code)
+        assert capsys.readouterr() == (params.dataframe_count_output, '')
 
         with pytest.raises(SparkRuntimeError):
-            session.run('missing_function()')
+            session.run(params.error_code)
 
         expected = pandas.DataFrame({'value': range(100)})
         assert session.read('df').equals(expected)
@@ -122,12 +123,44 @@ def test_sparkr(capsys):
     assert run_sync(session_stopped(session_id))
 
 
+@pytest.mark.parametrize('session_kind, params', [
+    (SessionKind.SPARK, SPARK_TEST_PARAMETERS),
+    (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
+    (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
+])
+@pytest.mark.asyncio
+async def test_session_async(capsys, session_kind, params):
+
+    assert await livy_available()
+
+    async with AsyncLivySession(LIVY_URL, kind=session_kind) as session:
+
+        await session.run(params.print_foo_code)
+        assert capsys.readouterr() == (params.print_foo_output, '')
+
+        await session.run(params.create_dataframe_code)
+        capsys.readouterr()
+
+        await session.run(params.dataframe_count_code)
+        assert capsys.readouterr() == (params.dataframe_count_output, '')
+
+        with pytest.raises(SparkRuntimeError):
+            await session.run(params.error_code)
+
+        expected = pandas.DataFrame({'value': range(100)})
+        assert (await session.read('df')).equals(expected)
+
+        session_id = session.session_id
+
+    await session_stopped(session_id)
+
+
 SQL_CREATE_VIEW = """
 CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
 """
 
 
-def test_sql():
+def test_sql_session_sync():
 
     assert run_sync(livy_available())
 
@@ -143,3 +176,22 @@ def test_sql():
         session_id = session.session_id
 
     assert run_sync(session_stopped(session_id))
+
+
+@pytest.mark.asyncio
+async def test_sql_session_async():
+
+    assert await livy_available()
+
+    async with AsyncLivySession(LIVY_URL, kind=SessionKind.SQL) as session:
+
+        await session.run(SQL_CREATE_VIEW)
+        output = await session.run('SELECT COUNT(*) FROM view')
+        assert output.json['data'] == [[100]]
+
+        with pytest.raises(SparkRuntimeError):
+            await session.run('not valid SQL!')
+
+        session_id = session.session_id
+
+    assert await session_stopped(session_id)
