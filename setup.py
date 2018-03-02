@@ -58,10 +58,11 @@ setup(
         'it': IntegrationTests
     },
     install_requires=[
-        'requests',
+        'aiohttp',
         'pandas'
     ],
     tests_require=[
-        'pytest'
+        'pytest',
+        'pytest-asyncio'
     ]
 )
