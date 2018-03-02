@@ -1,13 +1,15 @@
 import json
 import logging
-import re
 import asyncio
-from enum import Enum
-from functools import total_ordering
-from typing import NamedTuple, Optional, List
 
 import aiohttp
 import pandas
+
+from livy.models import (  # noqa: F401
+    Session, SessionKind, SessionState,
+    Statement, StatementState,
+    SparkRuntimeError, Version
+)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -35,15 +37,6 @@ def extract_serialised_dataframe(text):
         if line:
             rows.append(json.loads(line))
     return pandas.DataFrame(rows)
-
-
-class SessionKind(Enum):
-    SPARK = 'spark'
-    PYSPARK = 'pyspark'
-    PYSPARK3 = 'pyspark3'
-    SPARKR = 'sparkr'
-    SQL = 'sql'
-    SHARED = 'shared'
 
 
 class Livy:
@@ -151,40 +144,6 @@ class JsonClient:
             response.raise_for_status()
             response_data = await response.json()
         return response_data
-
-
-@total_ordering
-class Version:
-
-    def __init__(self, version):
-        match = re.match(r'(\d+)\.(\d+)\.(\d+)(\S+)$', version)
-        if match is None:
-            raise ValueError(f'invalid version string {version!r}')
-        self.major, self.minor, self.dot, self.extension = match.groups()
-
-    def __repr__(self):
-        name = self.__class__.__name__
-        return f'{name}({self.major}.{self.minor}.{self.dot}{self.extension})'
-
-    def __eq__(self, other):
-        return (
-            self.major == other.major and
-            self.minor == other.minor and
-            self.dot == other.dot
-        )
-
-    def __lt__(self, other):
-        if self.major < other.major:
-            return True
-        elif self.major == other.major:
-            if self.minor < other.minor:
-                return True
-            elif self.minor == other.minor:
-                return self.dot < other.dot
-            else:
-                return False
-        else:
-            return False
 
 
 async def wait_until_session_ready(client, session_id, interval=1.0):
@@ -307,115 +266,3 @@ class LivyClient:
             f'/sessions/{session_id}/statements/{statement_id}'
         )
         return Statement.from_json(session_id, response)
-
-
-class SparkRuntimeError(Exception):
-
-    def __init__(self, ename, evalue, traceback):
-        self.ename = ename
-        self.evalue = evalue
-        self.traceback = traceback
-
-    def __repr__(self):
-        name = self.__class__.__name__
-        components = []
-        if self.ename is not None:
-            components.append(f'ename={self.ename!r}')
-        if self.evalue is not None:
-            components.append(f'evalue={self.evalue!r}')
-        return f'{name}({", ".join(components)})'
-
-
-class OutputStatus(Enum):
-    OK = 'ok'
-    ERROR = 'error'
-
-
-_Output = NamedTuple(
-    '_Output',
-    [
-        ('status', OutputStatus),
-        ('text', Optional[str]),
-        ('json', Optional[dict]),
-        ('ename', Optional[str]),
-        ('evalue', Optional[str]),
-        ('traceback', Optional[List[str]])
-    ]
-)
-
-
-class Output(_Output):
-
-    @classmethod
-    def from_json(cls, data):
-        if data is None:
-            return None
-        return cls(
-            OutputStatus(data['status']),
-            data.get('data', {}).get('text/plain'),
-            data.get('data', {}).get('application/json'),
-            data.get('ename'),
-            data.get('evalue'),
-            data.get('traceback')
-        )
-
-    def raise_for_status(self):
-        if self.status == OutputStatus.ERROR:
-            raise SparkRuntimeError(self.ename, self.evalue, self.traceback)
-
-
-class StatementState(Enum):
-    WAITING = 'waiting'
-    RUNNING = 'running'
-    AVAILABLE = 'available'
-    ERROR = 'error'
-    CANCELLING = 'cancelling'
-    CANCELLED = 'cancelled'
-
-
-_Statement = NamedTuple(
-    '_Statement',
-    [
-        ('session_id', int),
-        ('statement_id', int),
-        ('state', StatementState),
-        ('output', Optional[Output])]
-)
-
-
-class Statement(_Statement):
-
-    @classmethod
-    def from_json(cls, session_id, data):
-        return cls(
-            session_id, data['id'], StatementState(data['state']),
-            Output.from_json(data['output'])
-        )
-
-
-class SessionState(Enum):
-    NOT_STARTED = 'not_started'
-    STARTING = 'starting'
-    IDLE = 'idle'
-    BUSY = 'busy'
-    SHUTTING_DOWN = 'shutting_down'
-    ERROR = 'error'
-    DEAD = 'dead'
-    SUCCESS = 'success'
-
-
-_Session = NamedTuple(
-    '_Session',
-    [('session_id', int), ('kind', SessionKind), ('state', SessionState)]
-)
-
-
-class Session(_Session):
-
-    @classmethod
-    def from_json(cls, data):
-        return cls(
-            data['id'],
-            SessionKind(data['kind']),
-            SessionState(data['state'])
-        )
