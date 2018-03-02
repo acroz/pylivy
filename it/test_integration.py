@@ -57,7 +57,7 @@ def test_spark(capsys):
         expected = pandas.DataFrame({'value': range(100)})
         assert client.read('df').equals(expected)
 
-        session_id = client.session.id_
+        session_id = client.session_id
 
     assert run_sync(session_stopped(session_id))
 
@@ -87,7 +87,7 @@ def test_pyspark(capsys):
         expected = pandas.DataFrame({'value': range(100)})
         assert client.read('df').equals(expected)
 
-        session_id = client.session.id_
+        session_id = client.session_id
 
     assert run_sync(session_stopped(session_id))
 
@@ -116,7 +116,7 @@ def test_sparkr(capsys):
         expected = pandas.DataFrame({'value': range(100)})
         assert client.read('df').equals(expected)
 
-        session_id = client.session.id_
+        session_id = client.session_id
 
     assert run_sync(session_stopped(session_id))
 
@@ -139,6 +139,6 @@ def test_sql():
         with pytest.raises(SparkRuntimeError):
             client.run('not valid SQL!')
 
-        session_id = client.session.id_
+        session_id = client.session_id
 
     assert run_sync(session_stopped(session_id))

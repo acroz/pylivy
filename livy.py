@@ -4,6 +4,7 @@ import re
 import asyncio
 from enum import Enum
 from functools import total_ordering
+from typing import NamedTuple, Optional, List
 
 import aiohttp
 import pandas
@@ -49,10 +50,9 @@ class Livy:
 
     def __init__(self, url=DEFAULT_URL, kind=SessionKind.PYSPARK, echo=True,
                  check=True):
-        self._client = JsonClient(url)
-        self.manager = SessionManager(self._client)
+        self.client = LivyClient(url)
         self.kind = kind
-        self.session = None
+        self.session_id = None
         self.echo = echo
         self.check = check
 
@@ -64,26 +64,19 @@ class Livy:
         self.close()
 
     def start(self):
-        loop = asyncio.get_event_loop()
-        self.session = loop.run_until_complete(
-            asyncio.ensure_future(
-                self.manager.new(self.kind)
-            )
-        )
+        session = run_sync(self.client.create_session(self.kind))
+        self.session_id = session.session_id
 
     def close(self):
 
         async def _close():
-            await self.session.kill()
-            await self._client.close()
+            await self.client.delete_session(self.session_id)
+            await self.client.close()
 
-        loop = asyncio.get_event_loop()
-        self.session = loop.run_until_complete(
-            asyncio.ensure_future(_close())
-        )
+        run_sync(_close())
 
     def run(self, code):
-        output = self._execute_sync(code)
+        output = run_sync(self._execute(code))
         if self.echo and output.text:
             print(output.text)
         if self.check:
@@ -104,22 +97,21 @@ class Livy:
             )
 
         code = template.format(dataframe_name)
-        output = self._execute_sync(code)
+        output = run_sync(self._execute(code))
         output.raise_for_status()
 
         return extract_serialised_dataframe(output.text)
 
-    def _execute_sync(self, code):
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(
-            asyncio.ensure_future(self._execute(code))
-        )
-
     async def _execute(self, code):
-        await self.session.wait_until_ready()
+        await wait_until_session_ready(self.client, self.session_id)
         LOGGER.info('Beginning code statement execution')
-        statement = await self.session.run_statement(code)
-        await statement.wait_until_finished()
+        statement = await self.client.create_statement(self.session_id, code)
+        await wait_until_statement_finished(
+            self.client, statement.session_id, statement.statement_id
+        )
+        statement = await self.client.get_statement(
+            statement.session_id, statement.statement_id
+        )
         LOGGER.info(
             'Completed code statement execution with status '
             f'{statement.output.status}'
@@ -152,12 +144,6 @@ class JsonClient:
 
     async def delete(self, endpoint=''):
         return await self._request('DELETE', endpoint)
-
-    async def server_version(self):
-        if self._server_version_cache is None:
-            data = await self.get('/version')
-            self._server_version_cache = Version(data['version'])
-        return self._server_version_cache
 
     async def _request(self, method, endpoint, data=None):
         url = self.url.rstrip('/') + endpoint
@@ -201,6 +187,29 @@ class Version:
             return False
 
 
+async def wait_until_session_ready(client, session_id, interval=1.0):
+
+    async def ready():
+        session = await client.get_session(session_id)
+        return session.state not in {SessionState.NOT_STARTED,
+                                     SessionState.STARTING}
+
+    while not await ready():
+        await asyncio.sleep(interval)
+
+
+async def wait_until_statement_finished(client, session_id, statement_id,
+                                        interval=1.0):
+
+    async def finished():
+        statement = await client.get_statement(session_id, statement_id)
+        return statement.state not in {StatementState.WAITING,
+                                       StatementState.RUNNING}
+
+    while not await finished():
+        await asyncio.sleep(interval)
+
+
 VALID_LEGACY_SESSION_KINDS = {
     SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.PYSPARK3,
     SessionKind.SPARKR
@@ -215,28 +224,48 @@ VALID_STATEMENT_KINDS = {
 }
 
 
-class SessionManager:
+class LivyClient:
 
-    def __init__(self, client):
-        self._client = client
+    def __init__(self, url):
+        self._client = JsonClient(url)
         self._server_version_cache = None
 
-    async def list(self):
+    async def close(self):
+        await self._client.close()
+
+    async def server_version(self):
+        if self._server_version_cache is None:
+            data = await self._client.get('/version')
+            self._server_version_cache = Version(data['version'])
+        return self._server_version_cache
+
+    async def legacy_server(self):
+        version = await self.server_version()
+        return version < Version('0.5.0-incubating')
+
+    async def list_sessions(self):
         data = await self._client.get('/sessions')
         return [
-            Session.from_json(self._client, data) for item in data['sessions']
+            Session.from_json(data) for item in data['sessions']
         ]
 
-    async def new(self, kind):
-        valid_kinds = await self._valid_session_kinds()
+    async def create_session(self, kind):
+
+        if await self.legacy_server():
+            valid_kinds = VALID_LEGACY_SESSION_KINDS
+        else:
+            valid_kinds = VALID_SESSION_KINDS
+
         if kind not in valid_kinds:
             raise ValueError(
-                f'{kind} is not a valid session kind (one of {valid_kinds})'
+                f'{kind} is not a valid session kind for a Livy server of '
+                f'this version (should be one of {valid_kinds})'
             )
-        data = await self._client.post('/sessions', data={'kind': kind.value})
-        return Session.from_json(self._client, data)
 
-    async def get(self, session_id):
+        data = await self._client.post('/sessions', data={'kind': kind.value})
+        return Session.from_json(data)
+
+    async def get_session(self, session_id):
         try:
             data = await self._client.get(f'/sessions/{session_id}')
         except aiohttp.ClientResponseError as e:
@@ -244,145 +273,40 @@ class SessionManager:
                 return None
             else:
                 raise
-        return Session.from_json(self._client, data)
+        return Session.from_json(data)
 
-    async def _valid_session_kinds(self):
-        version = await self._client.server_version()
-        if version < Version('0.5.0-incubating'):
-            return VALID_LEGACY_SESSION_KINDS
-        else:
-            return VALID_SESSION_KINDS
+    async def delete_session(self, session_id):
+        await self._client.delete(f'/sessions/{session_id}')
 
+    async def list_statements(self, session_id):
+        response = await self._client.get(f'/sessions/{session_id}/statements')
+        return [
+            Statement.from_json(session_id, data)
+            for data in response['statements']
+        ]
 
-class SessionState(Enum):
-    NOT_STARTED = 'not_started'
-    STARTING = 'starting'
-    IDLE = 'idle'
-    BUSY = 'busy'
-    SHUTTING_DOWN = 'shutting_down'
-    ERROR = 'error'
-    DEAD = 'dead'
-    SUCCESS = 'success'
-
-
-class Session:
-
-    def __init__(self, client, id_, kind, state):
-        self._client = client
-        self.id_ = id_
-        self.kind = kind
-        self.state = state
-
-    @classmethod
-    def from_json(cls, url, data):
-        return cls(
-            url,
-            data['id'],
-            SessionKind(data['kind']),
-            SessionState(data['state'])
-        )
-
-    def __repr__(self):
-        name = self.__class__.__name__
-        return (
-            f'{name}(id_={self.id_}, kind={self.kind}, state={self.state})'
-        )
-
-    async def run_statement(self, code, kind=None):
+    async def create_statement(self, session_id, code, kind=None):
 
         data = {'code': code}
 
         if kind is not None:
-
-            version = await self._client.server_version()
-            if version < Version('0.5.0-incubating'):
+            if await self.legacy_server():
                 LOGGER.warning('statement kind ignored on Livy<0.5.0')
-
             if kind not in VALID_STATEMENT_KINDS:
                 raise ValueError(f'invalid code kind for statement {kind}')
-
             data['kind'] = kind.value
 
         response = await self._client.post(
-            f'/sessions/{self.id_}/statements',
+            f'/sessions/{session_id}/statements',
             data=data
         )
-        return Statement.from_json(self._client, self.id_, response)
+        return Statement.from_json(session_id, response)
 
-    async def get_statements(self):
-        response = await self._client.get(f'/sessions/{self.id_}/statements')
-        return [
-            Statement.from_json(self._client, self.id_, data)
-            for data in response['statements']
-        ]
-
-    def ready(self):
-        non_ready_states = {SessionState.NOT_STARTED, SessionState.STARTING}
-        return self.state not in non_ready_states
-
-    async def refresh(self):
-        response = await self._client.get(f'/sessions/{self.id_}/state')
-        self.state = SessionState(response['state'])
-
-    async def wait_until_ready(self, interval=1.0):
-        if not self.ready():
-            LOGGER.info('Waiting for session to be ready')
-            while not self.ready():
-                await asyncio.sleep(interval)
-                await self.refresh()
-            LOGGER.info('Session ready')
-
-    async def kill(self):
-        await self._client.delete(f'/sessions/{self.id_}')
-
-
-class StatementState(Enum):
-    WAITING = 'waiting'
-    RUNNING = 'running'
-    AVAILABLE = 'available'
-    ERROR = 'error'
-    CANCELLING = 'cancelling'
-    CANCELLED = 'cancelled'
-
-
-class Statement:
-
-    def __init__(self, client, session_id, id_, state, output):
-        self._client = client
-        self.session_id = session_id
-        self.id_ = id_
-        self.state = state
-        self.output = output
-
-    @classmethod
-    def from_json(cls, url, session_id, data):
-        return cls(
-            url, session_id, data['id'], StatementState(data['state']),
-            Output.from_json(data['output'])
-        )
-
-    def __repr__(self):
-        name = self.__class__.__name__
-        return (
-            f'{name}(session_id={self.session_id}, id_={self.id_}, '
-            f'state={self.state}, output={self.output!r})'
-        )
-
-    async def refresh(self):
+    async def get_statement(self, session_id, statement_id):
         response = await self._client.get(
-            f'/sessions/{self.session_id}/statements/{self.id_}'
+            f'/sessions/{session_id}/statements/{statement_id}'
         )
-
-        if response['id'] != self.id_:
-            raise RuntimeError('mismatched ids')
-
-        self.state = StatementState(response['state'])
-        self.output = Output.from_json(response['output'])
-
-    async def wait_until_finished(self, interval=1.0):
-        while self.state in {StatementState.WAITING, StatementState.RUNNING}:
-            await asyncio.sleep(interval)
-            await self.refresh()
+        return Statement.from_json(session_id, response)
 
 
 class SparkRuntimeError(Exception):
@@ -407,16 +331,20 @@ class OutputStatus(Enum):
     ERROR = 'error'
 
 
-class Output:
+_Output = NamedTuple(
+    '_Output',
+    [
+        ('status', OutputStatus),
+        ('text', Optional[str]),
+        ('json', Optional[dict]),
+        ('ename', Optional[str]),
+        ('evalue', Optional[str]),
+        ('traceback', Optional[List[str]])
+    ]
+)
 
-    def __init__(self, status, text=None, json=None, ename=None, evalue=None,
-                 traceback=None):
-        self.status = status
-        self.text = text
-        self.json = json
-        self.ename = ename
-        self.evalue = evalue
-        self.traceback = traceback
+
+class Output(_Output):
 
     @classmethod
     def from_json(cls, data):
@@ -431,21 +359,63 @@ class Output:
             data.get('traceback')
         )
 
-    def __repr__(self):
-        name = self.__class__.__name__
-        components = [f'status={self.status}']
-        if self.text is not None:
-            components.append(f'text={self.text!r}')
-        if self.json is not None:
-            components.append(f'json={self.json!r}')
-        if self.ename is not None:
-            components.append(f'ename={self.ename!r}')
-        if self.evalue is not None:
-            components.append(f'evalue={self.evalue!r}')
-        if self.traceback is not None:
-            components.append(f'traceback={self.traceback!r}')
-        return f'{name}({", ".join(components)})'
-
     def raise_for_status(self):
         if self.status == OutputStatus.ERROR:
             raise SparkRuntimeError(self.ename, self.evalue, self.traceback)
+
+
+class StatementState(Enum):
+    WAITING = 'waiting'
+    RUNNING = 'running'
+    AVAILABLE = 'available'
+    ERROR = 'error'
+    CANCELLING = 'cancelling'
+    CANCELLED = 'cancelled'
+
+
+_Statement = NamedTuple(
+    '_Statement',
+    [
+        ('session_id', int),
+        ('statement_id', int),
+        ('state', StatementState),
+        ('output', Optional[Output])]
+)
+
+
+class Statement(_Statement):
+
+    @classmethod
+    def from_json(cls, session_id, data):
+        return cls(
+            session_id, data['id'], StatementState(data['state']),
+            Output.from_json(data['output'])
+        )
+
+
+class SessionState(Enum):
+    NOT_STARTED = 'not_started'
+    STARTING = 'starting'
+    IDLE = 'idle'
+    BUSY = 'busy'
+    SHUTTING_DOWN = 'shutting_down'
+    ERROR = 'error'
+    DEAD = 'dead'
+    SUCCESS = 'success'
+
+
+_Session = NamedTuple(
+    '_Session',
+    [('session_id', int), ('kind', SessionKind), ('state', SessionState)]
+)
+
+
+class Session(_Session):
+
+    @classmethod
+    def from_json(cls, data):
+        return cls(
+            data['id'],
+            SessionKind(data['kind']),
+            SessionState(data['state'])
+        )
