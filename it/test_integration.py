@@ -97,7 +97,7 @@ SPARKR_TEST_PARAMETERS = TestParameters(
     (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
     (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
 ])
-def test_livy_session_sync(capsys, session_kind, params):
+def test_session_sync(capsys, session_kind, params):
 
     assert run_sync(livy_available())
 
@@ -121,6 +121,38 @@ def test_livy_session_sync(capsys, session_kind, params):
         session_id = session.session_id
 
     assert run_sync(session_stopped(session_id))
+
+
+@pytest.mark.parametrize('session_kind, params', [
+    (SessionKind.SPARK, SPARK_TEST_PARAMETERS),
+    (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
+    (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
+])
+@pytest.mark.asyncio
+async def test_session_async(capsys, session_kind, params):
+
+    assert await livy_available()
+
+    async with AsyncLivySession(LIVY_URL, kind=session_kind) as session:
+
+        await session.run(params.print_foo_code)
+        assert capsys.readouterr() == (params.print_foo_output, '')
+
+        await session.run(params.create_dataframe_code)
+        capsys.readouterr()
+
+        await session.run(params.dataframe_count_code)
+        assert capsys.readouterr() == (params.dataframe_count_output, '')
+
+        with pytest.raises(SparkRuntimeError):
+            await session.run(params.error_code)
+
+        expected = pandas.DataFrame({'value': range(100)})
+        assert (await session.read('df')).equals(expected)
+
+        session_id = session.session_id
+
+    await session_stopped(session_id)
 
 
 SQL_CREATE_VIEW = """
