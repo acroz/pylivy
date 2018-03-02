@@ -49,13 +49,7 @@ class Livy:
 
     def __init__(self, url=DEFAULT_URL, kind=SessionKind.PYSPARK, echo=True,
                  check=True):
-
-        async def new_session():
-            return aiohttp.ClientSession()
-
-        http_session = run_sync(new_session())
-        self._client = JsonClient(http_session, url)
-
+        self._client = JsonClient(url)
         self.manager = SessionManager(self._client)
         self.kind = kind
         self.session = None
@@ -135,13 +129,20 @@ class Livy:
 
 class JsonClient:
 
-    def __init__(self, session, url):
+    def __init__(self, url):
         self.url = url
-        self._http_session = session
+        self._session_cache = None
         self._server_version_cache = None
 
+    @property
+    def session(self):
+        if self._session_cache is None:
+            self._session_cache = aiohttp.ClientSession()
+        return self._session_cache
+
     async def close(self):
-        await self._http_session.close()
+        await self.session.close()
+        self._http_session = None
 
     async def get(self, endpoint=''):
         return await self._request('GET', endpoint)
@@ -160,9 +161,7 @@ class JsonClient:
 
     async def _request(self, method, endpoint, data=None):
         url = self.url.rstrip('/') + endpoint
-        async with self._http_session.request(
-            method, url, json=data
-        ) as response:
+        async with self.session.request(method, url, json=data) as response:
             response.raise_for_status()
             response_data = await response.json()
         return response_data
