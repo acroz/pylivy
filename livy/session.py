@@ -133,3 +133,34 @@ class LivySession(BaseLivySession):
         output = run_sync(self._execute(code))
         output.raise_for_status()
         return deserialise_dataframe(output.text)
+
+
+class AsyncLivySession(BaseLivySession):
+
+    async def __aenter__(self):
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.close()
+
+    async def start(self):
+        session = await self.client.create_session(self.kind)
+        self.session_id = session.session_id
+
+    async def close(self):
+        await self._close()
+
+    async def run(self, code):
+        output = await self._execute(code)
+        if self.echo and output.text:
+            print(output.text)
+        if self.check:
+            output.raise_for_status()
+        return output
+
+    async def read(self, dataframe_name):
+        code = serialise_dataframe_code(dataframe_name, self.kind)
+        output = await self._execute(code)
+        output.raise_for_status()
+        return deserialise_dataframe(output.text)
