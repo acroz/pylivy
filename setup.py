@@ -41,7 +41,7 @@ setup(
     version='0.1.0',
     description='A Python client for Apache Livy',
     long_description=README.read_text(),
-    py_modules=['livy'],
+    packages=['livy'],
     url='https://github.com/acroz/pylivy',
     author='Andrew Crozier',
     author_email='wacrozier@gmail.com',

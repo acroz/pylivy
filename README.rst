@@ -7,10 +7,10 @@ client for Livy, enabling easy remote code execution on a Spark cluster:
 
 .. code:: python
 
-    from livy import Livy
+    from livy import LivySession
 
-    with Livy('http://spark.example.com:8998') as client:
+    with LivySession('http://spark.example.com:8998') as session:
         # Run some code on the remote cluster
-        client.run("filtered = df.filter(df.name == 'Bob')")
+        session.run("filtered = df.filter(df.name == 'Bob')")
         # Retrieve the result
-        local_df = client.read('filtered')
+        local_df = session.read('filtered')
