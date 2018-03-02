@@ -4,7 +4,8 @@ import pytest
 import aiohttp
 import pandas
 
-from livy import Livy, SessionKind, SparkRuntimeError, run_sync
+from livy import LivySession, SessionKind, SparkRuntimeError
+from livy.session import run_sync
 
 
 LIVY_URL = os.environ.get('LIVY_TEST_URL', 'http://localhost:8998')
@@ -40,24 +41,24 @@ def test_spark(capsys):
 
     assert run_sync(livy_available())
 
-    with Livy(LIVY_URL, kind=SessionKind.SPARK) as client:
+    with LivySession(LIVY_URL, kind=SessionKind.SPARK) as session:
 
-        client.run('println("foo")')
+        session.run('println("foo")')
         assert capsys.readouterr() == ('foo\n\n', '')
 
-        client.run(SPARK_CREATE_DF)
+        session.run(SPARK_CREATE_DF)
         capsys.readouterr()
 
-        client.run('df.count()')
+        session.run('df.count()')
         assert capsys.readouterr() == ('res1: Long = 100\n\n', '')
 
         with pytest.raises(SparkRuntimeError):
-            client.run('1 / 0')
+            session.run('1 / 0')
 
         expected = pandas.DataFrame({'value': range(100)})
-        assert client.read('df').equals(expected)
+        assert session.read('df').equals(expected)
 
-        session_id = client.session_id
+        session_id = session.session_id
 
     assert run_sync(session_stopped(session_id))
 
@@ -72,22 +73,22 @@ def test_pyspark(capsys):
 
     assert run_sync(livy_available())
 
-    with Livy(LIVY_URL, kind=SessionKind.PYSPARK) as client:
+    with LivySession(LIVY_URL, kind=SessionKind.PYSPARK) as session:
 
-        client.run('print("foo")')
+        session.run('print("foo")')
         assert capsys.readouterr() == ('foo\n', '')
 
-        client.run(PYSPARK_CREATE_DF)
-        client.run('df.count()')
+        session.run(PYSPARK_CREATE_DF)
+        session.run('df.count()')
         assert capsys.readouterr() == ('100\n', '')
 
         with pytest.raises(SparkRuntimeError):
-            client.run('1 / 0')
+            session.run('1 / 0')
 
         expected = pandas.DataFrame({'value': range(100)})
-        assert client.read('df').equals(expected)
+        assert session.read('df').equals(expected)
 
-        session_id = client.session_id
+        session_id = session.session_id
 
     assert run_sync(session_stopped(session_id))
 
@@ -101,22 +102,22 @@ def test_sparkr(capsys):
 
     assert run_sync(livy_available())
 
-    with Livy(LIVY_URL, kind=SessionKind.SPARKR) as client:
+    with LivySession(LIVY_URL, kind=SessionKind.SPARKR) as session:
 
-        client.run('print("foo")')
+        session.run('print("foo")')
         assert capsys.readouterr() == ('[1] "foo"\n', '')
 
-        client.run(SPARKR_CREATE_DF)
-        client.run('count(df)')
+        session.run(SPARKR_CREATE_DF)
+        session.run('count(df)')
         assert capsys.readouterr() == ('[1] 100\n', '')
 
         with pytest.raises(SparkRuntimeError):
-            client.run('missing_function()')
+            session.run('missing_function()')
 
         expected = pandas.DataFrame({'value': range(100)})
-        assert client.read('df').equals(expected)
+        assert session.read('df').equals(expected)
 
-        session_id = client.session_id
+        session_id = session.session_id
 
     assert run_sync(session_stopped(session_id))
 
@@ -130,15 +131,15 @@ def test_sql():
 
     assert run_sync(livy_available())
 
-    with Livy(LIVY_URL, kind=SessionKind.SQL) as client:
+    with LivySession(LIVY_URL, kind=SessionKind.SQL) as session:
 
-        client.run(SQL_CREATE_VIEW)
-        output = client.run('SELECT COUNT(*) FROM view')
+        session.run(SQL_CREATE_VIEW)
+        output = session.run('SELECT COUNT(*) FROM view')
         assert output.json['data'] == [[100]]
 
         with pytest.raises(SparkRuntimeError):
-            client.run('not valid SQL!')
+            session.run('not valid SQL!')
 
-        session_id = client.session_id
+        session_id = session.session_id
 
     assert run_sync(session_stopped(session_id))
