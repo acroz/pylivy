@@ -1,14 +1,10 @@
 import os
-import asyncio
 
 import pytest
 import aiohttp
 import pandas
 
-from livy import (
-    Livy, JsonClient, SessionKind, SessionManager, SessionState,
-    SparkRuntimeError, run_sync
-)
+from livy import Livy, SessionKind, SparkRuntimeError, run_sync
 
 
 LIVY_URL = os.environ.get('LIVY_TEST_URL', 'http://localhost:8998')
