@@ -47,6 +47,21 @@ def deserialise_dataframe(text):
     return pandas.DataFrame(rows)
 
 
+def polling_intervals(start, rest, max_duration=None):
+
+    def _intervals():
+        yield from start
+        while True:
+            yield rest
+
+    cumulative = 0
+    for interval in _intervals():
+        cumulative += interval
+        if max_duration is not None and cumulative > max_duration:
+            break
+        yield interval
+
+
 async def wait_until_statement_finished(client, session_id, statement_id,
                                         interval=1.0):
 
@@ -73,9 +88,10 @@ class BaseLivySession:
         self.session_id = session.session_id
 
         not_ready = {SessionState.NOT_STARTED, SessionState.STARTING}
+        intervals = polling_intervals([0.1, 0.2, 0.3, 0.5], 1.0)
 
         while (await self._state()) in not_ready:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(next(intervals))
 
     async def _state(self):
         if self.session_id is None:
