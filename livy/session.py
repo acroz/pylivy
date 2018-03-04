@@ -4,11 +4,7 @@ import asyncio
 
 import pandas
 
-from livy.models import (  # noqa: F401
-    Session, SessionKind, SessionState,
-    Statement, StatementState,
-    SparkRuntimeError
-)
+from livy.models import SessionKind, SessionState, StatementState
 from livy.client import LivyClient
 
 
