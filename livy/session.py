@@ -1,5 +1,4 @@
 import json
-import logging
 import asyncio
 
 import pandas
@@ -7,8 +6,6 @@ import pandas
 from livy.models import SessionKind, SessionState, StatementState
 from livy.client import LivyClient
 
-
-LOGGER = logging.getLogger(__name__)
 
 SERIALISE_DATAFRAME_TEMPLATE_SPARK = '{}.toJSON.collect.foreach(println)'
 SERIALISE_DATAFRAME_TEMPLATE_PYSPARK = """
@@ -94,7 +91,6 @@ class BaseLivySession:
         await self.client.close()
 
     async def _execute(self, code):
-        LOGGER.info('Beginning code statement execution')
         statement = await self.client.create_statement(self.session_id, code)
 
         not_finished = {StatementState.WAITING, StatementState.RUNNING}
@@ -105,10 +101,7 @@ class BaseLivySession:
             statement = await self.client.get_statement(
                 statement.session_id, statement.statement_id
             )
-        LOGGER.info(
-            'Completed code statement execution with status '
-            f'{statement.output.status}'
-        )
+
         return statement.output
 
 
