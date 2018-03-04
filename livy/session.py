@@ -62,18 +62,6 @@ def polling_intervals(start, rest, max_duration=None):
         yield interval
 
 
-async def wait_until_statement_finished(client, session_id, statement_id,
-                                        interval=1.0):
-
-    async def finished():
-        statement = await client.get_statement(session_id, statement_id)
-        return statement.state not in {StatementState.WAITING,
-                                       StatementState.RUNNING}
-
-    while not await finished():
-        await asyncio.sleep(interval)
-
-
 class BaseLivySession:
 
     def __init__(self, url, kind=SessionKind.PYSPARK, echo=True, check=True):
@@ -108,12 +96,15 @@ class BaseLivySession:
     async def _execute(self, code):
         LOGGER.info('Beginning code statement execution')
         statement = await self.client.create_statement(self.session_id, code)
-        await wait_until_statement_finished(
-            self.client, statement.session_id, statement.statement_id
-        )
-        statement = await self.client.get_statement(
-            statement.session_id, statement.statement_id
-        )
+
+        not_finished = {StatementState.WAITING, StatementState.RUNNING}
+        intervals = polling_intervals([0.1, 0.2, 0.3, 0.5], 1.0)
+
+        while statement.state in not_finished:
+            await asyncio.sleep(next(intervals))
+            statement = await self.client.get_statement(
+                statement.session_id, statement.statement_id
+            )
         LOGGER.info(
             'Completed code statement execution with status '
             f'{statement.output.status}'
