@@ -122,9 +122,7 @@ def test_session_sync(capsys, session_kind, params):
         expected = pandas.DataFrame({'value': range(100)})
         assert session.read('df').equals(expected)
 
-        session_id = session.session_id
-
-    assert run_sync(session_stopped(session_id))
+    assert run_sync(session_stopped(session.session_id))
 
 
 @pytest.mark.parametrize('session_kind, params', [
@@ -156,9 +154,7 @@ async def test_session_async(capsys, session_kind, params):
         expected = pandas.DataFrame({'value': range(100)})
         assert (await session.read('df')).equals(expected)
 
-        session_id = session.session_id
-
-    await session_stopped(session_id)
+    assert await session_stopped(session.session_id)
 
 
 SQL_CREATE_VIEW = """
@@ -181,9 +177,7 @@ def test_sql_session_sync():
         with pytest.raises(SparkRuntimeError):
             session.run('not valid SQL!')
 
-        session_id = session.session_id
-
-    assert run_sync(session_stopped(session_id))
+    assert run_sync(session_stopped(session.session_id))
 
 
 @pytest.mark.asyncio
@@ -202,6 +196,4 @@ async def test_sql_session_async():
         with pytest.raises(SparkRuntimeError):
             await session.run('not valid SQL!')
 
-        session_id = session.session_id
-
-    assert await session_stopped(session_id)
+    assert await session_stopped(session.session_id)
