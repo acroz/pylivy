@@ -51,17 +51,6 @@ def deserialise_dataframe(text):
     return pandas.DataFrame(rows)
 
 
-async def wait_until_session_ready(client, session_id, interval=1.0):
-
-    async def ready():
-        session = await client.get_session(session_id)
-        return session.state not in {SessionState.NOT_STARTED,
-                                     SessionState.STARTING}
-
-    while not await ready():
-        await asyncio.sleep(interval)
-
-
 async def wait_until_statement_finished(client, session_id, statement_id,
                                         interval=1.0):
 
@@ -83,6 +72,15 @@ class BaseLivySession:
         self.echo = echo
         self.check = check
 
+    async def _start(self):
+        session = await self.client.create_session(self.kind)
+        self.session_id = session.session_id
+
+        not_ready = {SessionState.NOT_STARTED, SessionState.STARTING}
+
+        while (await self._state()) in not_ready:
+            await asyncio.sleep(1.0)
+
     async def _state(self):
         if self.session_id is None:
             raise ValueError('session not yet started')
@@ -96,7 +94,6 @@ class BaseLivySession:
         await self.client.close()
 
     async def _execute(self, code):
-        await wait_until_session_ready(self.client, self.session_id)
         LOGGER.info('Beginning code statement execution')
         statement = await self.client.create_statement(self.session_id, code)
         await wait_until_statement_finished(
@@ -122,8 +119,7 @@ class LivySession(BaseLivySession):
         self.close()
 
     def start(self):
-        session = run_sync(self.client.create_session(self.kind))
-        self.session_id = session.session_id
+        run_sync(self._start())
 
     def close(self):
         run_sync(self._close())
@@ -157,8 +153,7 @@ class AsyncLivySession(BaseLivySession):
         await self.close()
 
     async def start(self):
-        session = await self.client.create_session(self.kind)
-        self.session_id = session.session_id
+        await self._start()
 
     async def close(self):
         await self._close()

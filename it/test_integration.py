@@ -5,7 +5,9 @@ import pytest
 import aiohttp
 import pandas
 
-from livy import LivySession, AsyncLivySession, SessionKind, SparkRuntimeError
+from livy import (
+    LivySession, AsyncLivySession, SessionKind, SparkRuntimeError, SessionState
+)
 from livy.session import run_sync
 
 
@@ -103,6 +105,8 @@ def test_session_sync(capsys, session_kind, params):
 
     with LivySession(LIVY_URL, kind=session_kind) as session:
 
+        assert session.state == SessionState.IDLE
+
         session.run(params.print_foo_code)
         assert capsys.readouterr() == (params.print_foo_output, '')
 
@@ -135,6 +139,8 @@ async def test_session_async(capsys, session_kind, params):
 
     async with AsyncLivySession(LIVY_URL, kind=session_kind) as session:
 
+        assert (await session.state) == SessionState.IDLE
+
         await session.run(params.print_foo_code)
         assert capsys.readouterr() == (params.print_foo_output, '')
 
@@ -166,6 +172,8 @@ def test_sql_session_sync():
 
     with LivySession(LIVY_URL, kind=SessionKind.SQL) as session:
 
+        assert session.state == SessionState.IDLE
+
         session.run(SQL_CREATE_VIEW)
         output = session.run('SELECT COUNT(*) FROM view')
         assert output.json['data'] == [[100]]
@@ -184,6 +192,8 @@ async def test_sql_session_async():
     assert await livy_available()
 
     async with AsyncLivySession(LIVY_URL, kind=SessionKind.SQL) as session:
+
+        assert (await session.state) == SessionState.IDLE
 
         await session.run(SQL_CREATE_VIEW)
         output = await session.run('SELECT COUNT(*) FROM view')
