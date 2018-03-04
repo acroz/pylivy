@@ -4,11 +4,7 @@ import asyncio
 
 import pandas
 
-from livy.models import (  # noqa: F401
-    Session, SessionKind, SessionState,
-    Statement, StatementState,
-    SparkRuntimeError
-)
+from livy.models import SessionKind, SessionState, StatementState
 from livy.client import LivyClient
 
 
@@ -51,17 +47,6 @@ def deserialise_dataframe(text):
     return pandas.DataFrame(rows)
 
 
-async def wait_until_session_ready(client, session_id, interval=1.0):
-
-    async def ready():
-        session = await client.get_session(session_id)
-        return session.state not in {SessionState.NOT_STARTED,
-                                     SessionState.STARTING}
-
-    while not await ready():
-        await asyncio.sleep(interval)
-
-
 async def wait_until_statement_finished(client, session_id, statement_id,
                                         interval=1.0):
 
@@ -83,12 +68,28 @@ class BaseLivySession:
         self.echo = echo
         self.check = check
 
+    async def _start(self):
+        session = await self.client.create_session(self.kind)
+        self.session_id = session.session_id
+
+        not_ready = {SessionState.NOT_STARTED, SessionState.STARTING}
+
+        while (await self._state()) in not_ready:
+            await asyncio.sleep(1.0)
+
+    async def _state(self):
+        if self.session_id is None:
+            raise ValueError('session not yet started')
+        session = await self.client.get_session(self.session_id)
+        if session is None:
+            raise ValueError('session not found - it may have been shut down')
+        return session.state
+
     async def _close(self):
         await self.client.delete_session(self.session_id)
         await self.client.close()
 
     async def _execute(self, code):
-        await wait_until_session_ready(self.client, self.session_id)
         LOGGER.info('Beginning code statement execution')
         statement = await self.client.create_statement(self.session_id, code)
         await wait_until_statement_finished(
@@ -114,11 +115,14 @@ class LivySession(BaseLivySession):
         self.close()
 
     def start(self):
-        session = run_sync(self.client.create_session(self.kind))
-        self.session_id = session.session_id
+        run_sync(self._start())
 
     def close(self):
         run_sync(self._close())
+
+    @property
+    def state(self):
+        return run_sync(self._state())
 
     def run(self, code):
         output = run_sync(self._execute(code))
@@ -145,11 +149,14 @@ class AsyncLivySession(BaseLivySession):
         await self.close()
 
     async def start(self):
-        session = await self.client.create_session(self.kind)
-        self.session_id = session.session_id
+        await self._start()
 
     async def close(self):
         await self._close()
+
+    @property
+    async def state(self):
+        return await self._state()
 
     async def run(self, code):
         output = await self._execute(code)
