@@ -83,6 +83,14 @@ class BaseLivySession:
         self.echo = echo
         self.check = check
 
+    async def _state(self):
+        if self.session_id is None:
+            raise ValueError('session not yet started')
+        session = await self.client.get_session(self.session_id)
+        if session is None:
+            raise ValueError('session not found - it may have been shut down')
+        return session.state
+
     async def _close(self):
         await self.client.delete_session(self.session_id)
         await self.client.close()
@@ -120,6 +128,10 @@ class LivySession(BaseLivySession):
     def close(self):
         run_sync(self._close())
 
+    @property
+    def state(self):
+        return run_sync(self._state())
+
     def run(self, code):
         output = run_sync(self._execute(code))
         if self.echo and output.text:
@@ -150,6 +162,10 @@ class AsyncLivySession(BaseLivySession):
 
     async def close(self):
         await self._close()
+
+    @property
+    async def state(self):
+        return await self._state()
 
     async def run(self, code):
         output = await self._execute(code)
