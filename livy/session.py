@@ -1,5 +1,4 @@
 import json
-import logging
 import asyncio
 
 import pandas
@@ -7,8 +6,6 @@ import pandas
 from livy.models import SessionKind, SessionState, StatementState
 from livy.client import LivyClient
 
-
-LOGGER = logging.getLogger(__name__)
 
 SERIALISE_DATAFRAME_TEMPLATE_SPARK = '{}.toJSON.collect.foreach(println)'
 SERIALISE_DATAFRAME_TEMPLATE_PYSPARK = """
@@ -47,16 +44,19 @@ def deserialise_dataframe(text):
     return pandas.DataFrame(rows)
 
 
-async def wait_until_statement_finished(client, session_id, statement_id,
-                                        interval=1.0):
+def polling_intervals(start, rest, max_duration=None):
 
-    async def finished():
-        statement = await client.get_statement(session_id, statement_id)
-        return statement.state not in {StatementState.WAITING,
-                                       StatementState.RUNNING}
+    def _intervals():
+        yield from start
+        while True:
+            yield rest
 
-    while not await finished():
-        await asyncio.sleep(interval)
+    cumulative = 0
+    for interval in _intervals():
+        cumulative += interval
+        if max_duration is not None and cumulative > max_duration:
+            break
+        yield interval
 
 
 class BaseLivySession:
@@ -73,9 +73,10 @@ class BaseLivySession:
         self.session_id = session.session_id
 
         not_ready = {SessionState.NOT_STARTED, SessionState.STARTING}
+        intervals = polling_intervals([0.1, 0.2, 0.3, 0.5], 1.0)
 
         while (await self._state()) in not_ready:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(next(intervals))
 
     async def _state(self):
         if self.session_id is None:
@@ -90,18 +91,17 @@ class BaseLivySession:
         await self.client.close()
 
     async def _execute(self, code):
-        LOGGER.info('Beginning code statement execution')
         statement = await self.client.create_statement(self.session_id, code)
-        await wait_until_statement_finished(
-            self.client, statement.session_id, statement.statement_id
-        )
-        statement = await self.client.get_statement(
-            statement.session_id, statement.statement_id
-        )
-        LOGGER.info(
-            'Completed code statement execution with status '
-            f'{statement.output.status}'
-        )
+
+        not_finished = {StatementState.WAITING, StatementState.RUNNING}
+        intervals = polling_intervals([0.1, 0.2, 0.3, 0.5], 1.0)
+
+        while statement.state in not_finished:
+            await asyncio.sleep(next(intervals))
+            statement = await self.client.get_statement(
+                statement.session_id, statement.statement_id
+            )
+
         return statement.output
 
 
