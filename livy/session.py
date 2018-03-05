@@ -41,7 +41,17 @@ def deserialise_dataframe(text):
     for line in text.split('\n'):
         if line:
             rows.append(json.loads(line))
-    return pandas.DataFrame(rows)
+    return pandas.DataFrame.from_records(rows)
+
+
+def dataframe_from_json_output(json_output):
+    try:
+        fields = json_output['schema']['fields']
+        columns = [field['name'] for field in fields]
+        data = json_output['data']
+    except KeyError:
+        raise ValueError('json output does not match expected structure')
+    return pandas.DataFrame(data, columns=columns)
 
 
 def polling_intervals(start, rest, max_duration=None):
@@ -138,6 +148,11 @@ class LivySession(BaseLivySession):
         output.raise_for_status()
         return deserialise_dataframe(output.text)
 
+    def read_sql(self, code):
+        output = run_sync(self._execute(code))
+        output.raise_for_status()
+        return dataframe_from_json_output(output.json)
+
 
 class AsyncLivySession(BaseLivySession):
 
@@ -171,3 +186,8 @@ class AsyncLivySession(BaseLivySession):
         output = await self._execute(code)
         output.raise_for_status()
         return deserialise_dataframe(output.text)
+
+    async def read_sql(self, code):
+        output = await self._execute(code)
+        output.raise_for_status()
+        return dataframe_from_json_output(output.json)

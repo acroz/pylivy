@@ -177,6 +177,9 @@ def test_sql_session_sync():
         with pytest.raises(SparkRuntimeError):
             session.run('not valid SQL!')
 
+        expected = pandas.DataFrame({'id': range(100)})
+        assert session.read_sql('SELECT * FROM view').equals(expected)
+
     assert run_sync(session_stopped(session.session_id))
 
 
@@ -195,5 +198,8 @@ async def test_sql_session_async():
 
         with pytest.raises(SparkRuntimeError):
             await session.run('not valid SQL!')
+
+        expected = pandas.DataFrame({'id': range(100)})
+        assert (await session.read_sql('SELECT * FROM view')).equals(expected)
 
     assert await session_stopped(session.session_id)
