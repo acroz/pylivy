@@ -29,8 +29,8 @@ async def session_stopped(session_id):
                 return response.json()['state'] == 'shutting_down'
 
 
-TestParameters = namedtuple(
-    'TestParameters',
+Parameters = namedtuple(
+    'Parameters',
     [
         'print_foo_code',
         'print_foo_output',
@@ -53,7 +53,7 @@ val df = spark.createDataFrame(rdd.map { i => Row(i) }, schema)
 """
 
 
-SPARK_TEST_PARAMETERS = TestParameters(
+SPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='println("foo")',
     print_foo_output='foo\n\n',
     create_dataframe_code=SPARK_CREATE_DF,
@@ -69,7 +69,7 @@ df = spark.createDataFrame([Row(value=i) for i in range(100)])
 """
 
 
-PYSPARK_TEST_PARAMETERS = TestParameters(
+PYSPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
     print_foo_output='foo\n',
     create_dataframe_code=PYSPARK_CREATE_DF,
@@ -84,7 +84,7 @@ df <- createDataFrame(data.frame(value = 0:99))
 """
 
 
-SPARKR_TEST_PARAMETERS = TestParameters(
+SPARKR_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
     print_foo_output='[1] "foo"\n',
     create_dataframe_code=SPARKR_CREATE_DF,
