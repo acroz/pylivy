@@ -63,6 +63,8 @@ setup(
     ],
     tests_require=[
         'pytest',
-        'pytest-asyncio'
+        'pytest-mock',
+        'pytest-asyncio',
+        'pytest-aiohttp'
     ]
 )
