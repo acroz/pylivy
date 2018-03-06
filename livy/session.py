@@ -149,7 +149,7 @@ class LivySession(BaseLivySession):
         return deserialise_dataframe(output.text)
 
     def read_sql(self, code):
-        if not self.kind == SessionKind.SQL:
+        if self.kind != SessionKind.SQL:
             raise ValueError('not a SQL session')
         output = run_sync(self._execute(code))
         output.raise_for_status()
@@ -190,7 +190,7 @@ class AsyncLivySession(BaseLivySession):
         return deserialise_dataframe(output.text)
 
     async def read_sql(self, code):
-        if not self.kind == SessionKind.SQL:
+        if self.kind != SessionKind.SQL:
             raise ValueError('not a SQL session')
         output = await self._execute(code)
         output.raise_for_status()

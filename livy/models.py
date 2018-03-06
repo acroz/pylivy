@@ -55,15 +55,6 @@ class SparkRuntimeError(Exception):
         return f'{name}({", ".join(components)})'
 
 
-class SessionKind(Enum):
-    SPARK = 'spark'
-    PYSPARK = 'pyspark'
-    PYSPARK3 = 'pyspark3'
-    SPARKR = 'sparkr'
-    SQL = 'sql'
-    SHARED = 'shared'
-
-
 class OutputStatus(Enum):
     OK = 'ok'
     ERROR = 'error'
@@ -102,6 +93,13 @@ class Output(_Output):
             raise SparkRuntimeError(self.ename, self.evalue, self.traceback)
 
 
+class StatementKind(Enum):
+    SPARK = 'spark'
+    PYSPARK = 'pyspark'
+    SPARKR = 'sparkr'
+    SQL = 'sql'
+
+
 class StatementState(Enum):
     WAITING = 'waiting'
     RUNNING = 'running'
@@ -117,7 +115,8 @@ _Statement = NamedTuple(
         ('session_id', int),
         ('statement_id', int),
         ('state', StatementState),
-        ('output', Optional[Output])]
+        ('output', Optional[Output])
+    ]
 )
 
 
@@ -129,6 +128,15 @@ class Statement(_Statement):
             session_id, data['id'], StatementState(data['state']),
             Output.from_json(data['output'])
         )
+
+
+class SessionKind(Enum):
+    SPARK = 'spark'
+    PYSPARK = 'pyspark'
+    PYSPARK3 = 'pyspark3'
+    SPARKR = 'sparkr'
+    SQL = 'sql'
+    SHARED = 'shared'
 
 
 class SessionState(Enum):

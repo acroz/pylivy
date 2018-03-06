@@ -16,10 +16,6 @@ VALID_SESSION_KINDS = {
     SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.SPARKR,
     SessionKind.SQL, SessionKind.SHARED
 }
-VALID_STATEMENT_KINDS = {
-    SessionKind.SPARK, SessionKind.PYSPARK, SessionKind.SPARKR,
-    SessionKind.SQL
-}
 
 
 class JsonClient:
@@ -124,8 +120,6 @@ class LivyClient:
         if kind is not None:
             if await self.legacy_server():
                 LOGGER.warning('statement kind ignored on Livy<0.5.0')
-            if kind not in VALID_STATEMENT_KINDS:
-                raise ValueError(f'invalid code kind for statement {kind}')
             data['kind'] = kind.value
 
         response = await self._client.post(
