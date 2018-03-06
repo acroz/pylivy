@@ -11,4 +11,5 @@ script:
   - pip install flake8 mypy .
   - flake8
   - mypy . --ignore-missing-imports
+  - python setup.py test
   - python setup.py it
