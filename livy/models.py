@@ -7,24 +7,25 @@ from typing import NamedTuple, Optional, List
 @total_ordering
 class Version:
 
-    def __init__(self, version):
+    def __init__(self, version: str) -> None:
         match = re.match(r'(\d+)\.(\d+)\.(\d+)(\S+)$', version)
         if match is None:
             raise ValueError(f'invalid version string {version!r}')
         self.major, self.minor, self.dot, self.extension = match.groups()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.__class__.__name__
         return f'{name}({self.major}.{self.minor}.{self.dot}{self.extension})'
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
         return (
+            isinstance(other, Version) and
             self.major == other.major and
             self.minor == other.minor and
             self.dot == other.dot
         )
 
-    def __lt__(self, other):
+    def __lt__(self, other: 'Version') -> bool:
         if self.major < other.major:
             return True
         elif self.major == other.major:
@@ -40,12 +41,12 @@ class Version:
 
 class SparkRuntimeError(Exception):
 
-    def __init__(self, ename, evalue, traceback):
+    def __init__(self, ename: str, evalue: str, traceback: List[str]) -> None:
         self.ename = ename
         self.evalue = evalue
         self.traceback = traceback
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.__class__.__name__
         components = []
         if self.ename is not None:
@@ -76,9 +77,7 @@ _Output = NamedTuple(
 class Output(_Output):
 
     @classmethod
-    def from_json(cls, data):
-        if data is None:
-            return None
+    def from_json(cls, data: dict) -> 'Output':
         return cls(
             OutputStatus(data['status']),
             data.get('data', {}).get('text/plain'),
@@ -88,7 +87,7 @@ class Output(_Output):
             data.get('traceback')
         )
 
-    def raise_for_status(self):
+    def raise_for_status(self) -> None:
         if self.status == OutputStatus.ERROR:
             raise SparkRuntimeError(self.ename, self.evalue, self.traceback)
 
@@ -123,10 +122,16 @@ _Statement = NamedTuple(
 class Statement(_Statement):
 
     @classmethod
-    def from_json(cls, session_id, data):
+    def from_json(cls, session_id: int, data: dict) -> 'Statement':
+        if data['output'] is None:
+            output = None
+        else:
+            output = Output.from_json(data['output'])
         return cls(
-            session_id, data['id'], StatementState(data['state']),
-            Output.from_json(data['output'])
+            session_id,
+            data['id'],
+            StatementState(data['state']),
+            output
         )
 
 
@@ -159,7 +164,7 @@ _Session = NamedTuple(
 class Session(_Session):
 
     @classmethod
-    def from_json(cls, data):
+    def from_json(cls, data: dict) -> 'Session':
         return cls(
             data['id'],
             SessionKind(data['kind']),
