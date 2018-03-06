@@ -8,6 +8,7 @@ before_install:
   - docker run --publish 8998:8998 acroz/livy &
   - sleep 10
 script:
-  - pip install flake8 .
+  - pip install flake8 mypy .
   - flake8
+  - mypy . --ignore-missing-imports
   - python setup.py it
