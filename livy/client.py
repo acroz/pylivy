@@ -75,9 +75,7 @@ class LivyClient:
 
     async def list_sessions(self) -> List[Session]:
         data = await self._client.get('/sessions')
-        return [
-            Session.from_json(data) for item in data['sessions']
-        ]
+        return [Session.from_json(item) for item in data['sessions']]
 
     async def create_session(self, kind: SessionKind) -> Session:
 
