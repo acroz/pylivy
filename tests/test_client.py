@@ -25,3 +25,25 @@ async def test_list_sessions(mocker, aiohttp_server):
 
     assert sessions == [Session.from_json.return_value]
     Session.from_json.assert_called_once_with(mock_session_json)
+
+
+@pytest.mark.asyncio
+async def test_get_session(mocker, aiohttp_server):
+
+    # Mock deserialisation of response
+    mock_session_json = {'mock': 'session'}
+    mocker.patch.object(Session, 'from_json')
+
+    async def get_session(request):
+        return json_response(mock_session_json)
+
+    app = Application()
+    app.router.add_get('/sessions/5', get_session)
+    server = await aiohttp_server(app)
+
+    async with server:
+        client = LivyClient(str(server.make_url('/')))
+        session = await client.get_session(5)
+
+    assert session == Session.from_json.return_value
+    Session.from_json.assert_called_once_with(mock_session_json)
