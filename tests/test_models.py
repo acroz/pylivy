@@ -44,3 +44,27 @@ def test_output_jsondata_from_json():
     )
 
     assert Output.from_json(output_json) == expected_output
+
+
+def test_output_error_from_json():
+
+    output_json = {
+        'status': 'error',
+        'ename': 'SomeException',
+        'evalue': 'some error value',
+        'traceback': [
+            'traceback line 1',
+            'traceback line 2'
+        ]
+    }
+
+    expected_output = Output(
+        OutputStatus.ERROR, text=None, json=None,
+        ename='SomeException', evalue='some error value',
+        traceback=[
+            'traceback line 1',
+            'traceback line 2'
+        ]
+    )
+
+    assert Output.from_json(output_json) == expected_output
