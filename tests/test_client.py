@@ -77,6 +77,35 @@ async def test_create_session(mocker, aiohttp_server):
 
 
 @pytest.mark.asyncio
+async def test_get_statement(mocker, aiohttp_server):
+
+    session_id = 5
+    statement_id = 10
+    mock_statement_json = {'mock': 'statement'}
+    mocker.patch.object(Statement, 'from_json')
+
+    async def get_statement(request):
+        return json_response(mock_statement_json)
+
+    app = Application()
+    app.router.add_get(
+        f'/sessions/{session_id}/statements/{statement_id}',
+        get_statement
+    )
+    server = await aiohttp_server(app)
+
+    async with server:
+        client = LivyClient(str(server.make_url('/')))
+        session = await client.get_statement(session_id, statement_id)
+
+    assert session == Statement.from_json.return_value
+    Statement.from_json.assert_called_once_with(
+        session_id,
+        mock_statement_json
+    )
+
+
+@pytest.mark.asyncio
 async def test_create_statement(mocker, aiohttp_server):
 
     session_id = 5
@@ -99,10 +128,13 @@ async def test_create_statement(mocker, aiohttp_server):
     async with server:
         client = LivyClient(str(server.make_url('/')))
         session = await client.create_statement(
-            session_id, code, StatementKind.PYSPARK
+            session_id,
+            code,
+            StatementKind.PYSPARK
         )
 
     assert session == Statement.from_json.return_value
     Statement.from_json.assert_called_once_with(
-        session_id, mock_statement_json
+        session_id,
+        mock_statement_json
     )
