@@ -75,6 +75,23 @@ async def test_create_session(mocker, aiohttp_server):
 
 
 @pytest.mark.asyncio
+async def test_delete_session(mocker, aiohttp_server):
+
+    session_id = 5
+
+    async def delete_session(request):
+        return json_response({'msg': 'deleted'})
+
+    app = Application()
+    app.router.add_delete(f'/sessions/{session_id}', delete_session)
+    server = await aiohttp_server(app)
+
+    async with server:
+        client = LivyClient(str(server.make_url('/')))
+        await client.delete_session(session_id)
+
+
+@pytest.mark.asyncio
 async def test_list_statements(mocker, aiohttp_server):
 
     session_id = 5
