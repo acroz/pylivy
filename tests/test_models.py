@@ -1,8 +1,22 @@
+import pytest
+
 from livy.models import (
+    Version,
     Session, SessionKind, SessionState,
     Statement, StatementState,
     Output, OutputStatus
 )
+
+
+@pytest.mark.parametrize('earlier, later', [
+    ('0.1.0', '0.2.0'),
+    ('0.1.1', '0.2.0'),
+    ('1.9.0', '2.0.0'),
+    ('0.1.0', '0.1.1-withsuffix'),
+    ('0.1.0-suffix', '0.1.1')
+])
+def test_version(earlier, later):
+    assert Version(earlier) < Version(later)
 
 
 def test_session_from_json():
