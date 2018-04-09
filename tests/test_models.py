@@ -4,7 +4,8 @@ from livy.models import (
     Version,
     Session, SessionKind, SessionState,
     Statement, StatementState,
-    Output, OutputStatus
+    Output, OutputStatus,
+    SparkRuntimeError
 )
 
 
@@ -120,3 +121,12 @@ def test_output_error_from_json():
     )
 
     assert Output.from_json(output_json) == expected
+
+
+def test_output_raise_for_status():
+    ok_output = Output(OutputStatus.OK, None, None, None, None, None)
+    ok_output.raise_for_status()
+
+    error_output = Output(OutputStatus.ERROR, None, None, None, None, None)
+    with pytest.raises(SparkRuntimeError):
+        error_output.raise_for_status()
