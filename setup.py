@@ -58,7 +58,7 @@ setup(
         'it': IntegrationTests
     },
     install_requires=[
-        'aiohttp',
+        'requests',
         'pandas'
     ],
     tests_require=[
