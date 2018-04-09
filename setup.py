@@ -65,6 +65,7 @@ setup(
         'pytest',
         'pytest-mock',
         'pytest-asyncio',
-        'pytest-aiohttp'
+        'pytest-aiohttp',
+        'flask'
     ]
 )
