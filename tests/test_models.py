@@ -1,5 +1,7 @@
 from livy.models import (
-    Session, SessionKind, SessionState, Output, OutputStatus
+    Session, SessionKind, SessionState,
+    Statement, StatementState,
+    Output, OutputStatus
 )
 
 
@@ -11,9 +13,25 @@ def test_session_from_json():
         'state': 'idle'
     }
 
-    expected_session = Session(5, SessionKind.PYSPARK, SessionState.IDLE)
+    expected = Session(5, SessionKind.PYSPARK, SessionState.IDLE)
 
-    assert Session.from_json(session_json) == expected_session
+    assert Session.from_json(session_json) == expected
+
+
+def test_statement_from_json_no_output():
+
+    session_id = 5
+    statement_json = {
+        'id': 10,
+        'state': 'running',
+        'output': None
+    }
+
+    expected = Statement(
+        session_id, statement_id=10, state=StatementState.RUNNING, output=None
+    )
+
+    assert Statement.from_json(session_id, statement_json) == expected
 
 
 def test_output_textdata_from_json():
@@ -23,12 +41,12 @@ def test_output_textdata_from_json():
         'data': {'text/plain': 'some output'}
     }
 
-    expected_output = Output(
+    expected = Output(
         OutputStatus.OK, text='some output', json=None,
         ename=None, evalue=None, traceback=None
     )
 
-    assert Output.from_json(output_json) == expected_output
+    assert Output.from_json(output_json) == expected
 
 
 def test_output_jsondata_from_json():
@@ -38,12 +56,12 @@ def test_output_jsondata_from_json():
         'data': {'application/json': {'some': 'data'}}
     }
 
-    expected_output = Output(
+    expected = Output(
         OutputStatus.OK, text=None, json={'some': 'data'},
         ename=None, evalue=None, traceback=None
     )
 
-    assert Output.from_json(output_json) == expected_output
+    assert Output.from_json(output_json) == expected
 
 
 def test_output_error_from_json():
@@ -58,7 +76,7 @@ def test_output_error_from_json():
         ]
     }
 
-    expected_output = Output(
+    expected = Output(
         OutputStatus.ERROR, text=None, json=None,
         ename='SomeException', evalue='some error value',
         traceback=[
@@ -67,4 +85,4 @@ def test_output_error_from_json():
         ]
     )
 
-    assert Output.from_json(output_json) == expected_output
+    assert Output.from_json(output_json) == expected
