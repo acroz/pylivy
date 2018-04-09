@@ -8,7 +8,7 @@ from typing import NamedTuple, Optional, List
 class Version:
 
     def __init__(self, version: str) -> None:
-        match = re.match(r'(\d+)\.(\d+)\.(\d+)(\S+)$', version)
+        match = re.match(r'(\d+)\.(\d+)\.(\d+)(\S*)$', version)
         if match is None:
             raise ValueError(f'invalid version string {version!r}')
         self.major, self.minor, self.dot, self.extension = match.groups()
