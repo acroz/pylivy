@@ -34,6 +34,26 @@ def test_statement_from_json_no_output():
     assert Statement.from_json(session_id, statement_json) == expected
 
 
+def test_statement_from_json_with_output(mocker):
+
+    mocker.patch.object(Output, 'from_json')
+
+    session_id = 5
+    statement_json = {
+        'id': 10,
+        'state': 'running',
+        'output': 'dummy output'
+    }
+
+    expected = Statement(
+        session_id, statement_id=10, state=StatementState.RUNNING,
+        output=Output.from_json.return_value
+    )
+
+    assert Statement.from_json(session_id, statement_json) == expected
+    Output.from_json.assert_called_once_with('dummy output')
+
+
 def test_output_textdata_from_json():
 
     output_json = {
