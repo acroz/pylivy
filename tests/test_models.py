@@ -16,8 +16,17 @@ from livy.models import (
     ('0.1.0', '0.1.1-withsuffix'),
     ('0.1.0-suffix', '0.1.1')
 ])
-def test_version(earlier, later):
+def test_version_less_than(earlier, later):
     assert Version(earlier) < Version(later)
+
+
+@pytest.mark.parametrize('first, second', [
+    ('0.1.0', '0.1.0'),
+    ('0.1.0', '0.1.0-withsuffix'),
+    ('0.1.0-suffix', '0.1.0')
+])
+def test_version_equals(first, second):
+    assert Version(first) == Version(second)
 
 
 def test_session_from_json():
