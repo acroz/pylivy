@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, List
 
-import aiohttp
+import requests
 
 from livy.models import Version, Session, SessionKind, Statement, StatementKind
 
@@ -23,35 +23,27 @@ class JsonClient:
 
     def __init__(self, url: str) -> None:
         self.url = url
-        self._session_cache: Optional[aiohttp.ClientSession] = None
+        self.session = requests.Session()
 
-    @property
-    def session(self) -> aiohttp.ClientSession:
-        if self._session_cache is None:
-            self._session_cache = aiohttp.ClientSession()
-        return self._session_cache
+    def close(self) -> None:
+        self.session.close()
 
-    async def close(self) -> None:
-        await self.session.close()
-        self._session_cache = None
+    def get(self, endpoint: str='') -> dict:
+        return self._request('GET', endpoint)
 
-    async def get(self, endpoint: str='') -> dict:
-        return await self._request('GET', endpoint)
+    def post(self, endpoint: str, data: dict=None) -> dict:
+        return self._request('POST', endpoint, data)
 
-    async def post(self, endpoint: str, data: dict=None) -> dict:
-        return await self._request('POST', endpoint, data)
+    def delete(self, endpoint: str='') -> dict:
+        return self._request('DELETE', endpoint)
 
-    async def delete(self, endpoint: str='') -> dict:
-        return await self._request('DELETE', endpoint)
-
-    async def _request(
+    def _request(
         self, method: str, endpoint: str, data: dict=None
     ) -> dict:
         url = self.url.rstrip('/') + endpoint
-        async with self.session.request(method, url, json=data) as response:
-            response.raise_for_status()
-            response_data = await response.json()
-        return response_data
+        response = self.session.request(method, url, json=data)
+        response.raise_for_status()
+        return response.json()
 
 
 class LivyClient:
@@ -60,26 +52,26 @@ class LivyClient:
         self._client = JsonClient(url)
         self._server_version_cache: Optional[Version] = None
 
-    async def close(self) -> None:
-        await self._client.close()
+    def close(self) -> None:
+        self._client.close()
 
-    async def server_version(self) -> Version:
+    def server_version(self) -> Version:
         if self._server_version_cache is None:
-            data = await self._client.get('/version')
+            data = self._client.get('/version')
             self._server_version_cache = Version(data['version'])
         return self._server_version_cache
 
-    async def legacy_server(self) -> bool:
-        version = await self.server_version()
+    def legacy_server(self) -> bool:
+        version = self.server_version()
         return version < Version('0.5.0-incubating')
 
-    async def list_sessions(self) -> List[Session]:
-        data = await self._client.get('/sessions')
+    def list_sessions(self) -> List[Session]:
+        data = self._client.get('/sessions')
         return [Session.from_json(item) for item in data['sessions']]
 
-    async def create_session(self, kind: SessionKind) -> Session:
+    def create_session(self, kind: SessionKind) -> Session:
 
-        if await self.legacy_server():
+        if self.legacy_server():
             valid_kinds = VALID_LEGACY_SESSION_KINDS
         else:
             valid_kinds = VALID_SESSION_KINDS
@@ -90,50 +82,50 @@ class LivyClient:
                 f'this version (should be one of {valid_kinds})'
             )
 
-        data = await self._client.post('/sessions', data={'kind': kind.value})
+        data = self._client.post('/sessions', data={'kind': kind.value})
         return Session.from_json(data)
 
-    async def get_session(self, session_id: int) -> Session:
+    def get_session(self, session_id: int) -> Session:
         try:
-            data = await self._client.get(f'/sessions/{session_id}')
-        except aiohttp.ClientResponseError as e:
-            if e.code == 404:
+            data = self._client.get(f'/sessions/{session_id}')
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
                 return None
             else:
                 raise
         return Session.from_json(data)
 
-    async def delete_session(self, session_id: int) -> None:
-        await self._client.delete(f'/sessions/{session_id}')
+    def delete_session(self, session_id: int) -> None:
+        self._client.delete(f'/sessions/{session_id}')
 
-    async def list_statements(self, session_id: int) -> List[Statement]:
-        response = await self._client.get(f'/sessions/{session_id}/statements')
+    def list_statements(self, session_id: int) -> List[Statement]:
+        response = self._client.get(f'/sessions/{session_id}/statements')
         return [
             Statement.from_json(session_id, data)
             for data in response['statements']
         ]
 
-    async def create_statement(
+    def create_statement(
         self, session_id: int, code: str, kind: StatementKind=None
     ) -> Statement:
 
         data = {'code': code}
 
         if kind is not None:
-            if await self.legacy_server():
+            if self.legacy_server():
                 LOGGER.warning('statement kind ignored on Livy<0.5.0')
             data['kind'] = kind.value
 
-        response = await self._client.post(
+        response = self._client.post(
             f'/sessions/{session_id}/statements',
             data=data
         )
         return Statement.from_json(session_id, response)
 
-    async def get_statement(
+    def get_statement(
         self, session_id: int, statement_id: int
     ) -> Statement:
-        response = await self._client.get(
+        response = self._client.get(
             f'/sessions/{session_id}/statements/{statement_id}'
         )
         return Statement.from_json(session_id, response)

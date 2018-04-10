@@ -58,13 +58,12 @@ setup(
         'it': IntegrationTests
     },
     install_requires=[
-        'aiohttp',
+        'requests',
         'pandas'
     ],
     tests_require=[
         'pytest',
         'pytest-mock',
-        'pytest-asyncio',
-        'pytest-aiohttp'
+        'flask'
     ]
 )
