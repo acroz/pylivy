@@ -2,31 +2,27 @@ import os
 from collections import namedtuple
 
 import pytest
-import aiohttp
+import requests
 import pandas
 
 from livy import (
-    LivySession, AsyncLivySession, SessionKind, SparkRuntimeError, SessionState
+    LivySession, SessionKind, SparkRuntimeError, SessionState
 )
-from livy.session import run_sync
 
 
 LIVY_URL = os.environ.get('LIVY_TEST_URL', 'http://localhost:8998')
 
 
-async def livy_available():
-    async with aiohttp.ClientSession() as session:
-        async with session.get(LIVY_URL) as response:
-            return response.status == 200
+def livy_available():
+    return requests.get(LIVY_URL).status_code == 200
 
 
-async def session_stopped(session_id):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f'{LIVY_URL}/session/{session_id}') as response:
-            if response.status == 404:
-                return True
-            else:
-                return response.json()['state'] == 'shutting_down'
+def session_stopped(session_id):
+    response = requests.get(f'{LIVY_URL}/session/{session_id}')
+    if response.status_code == 404:
+        return True
+    else:
+        return response.get_json()['state'] == 'shutting_down'
 
 
 Parameters = namedtuple(
@@ -99,9 +95,9 @@ SPARKR_TEST_PARAMETERS = Parameters(
     (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
     (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
 ])
-def test_session_sync(capsys, session_kind, params):
+def test_session(capsys, session_kind, params):
 
-    assert run_sync(livy_available())
+    assert livy_available()
 
     with LivySession(LIVY_URL, kind=session_kind) as session:
 
@@ -122,39 +118,7 @@ def test_session_sync(capsys, session_kind, params):
         expected = pandas.DataFrame({'value': range(100)})
         assert session.read('df').equals(expected)
 
-    assert run_sync(session_stopped(session.session_id))
-
-
-@pytest.mark.parametrize('session_kind, params', [
-    (SessionKind.SPARK, SPARK_TEST_PARAMETERS),
-    (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
-    (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
-])
-@pytest.mark.asyncio
-async def test_session_async(capsys, session_kind, params):
-
-    assert await livy_available()
-
-    async with AsyncLivySession(LIVY_URL, kind=session_kind) as session:
-
-        assert (await session.state) == SessionState.IDLE
-
-        await session.run(params.print_foo_code)
-        assert capsys.readouterr() == (params.print_foo_output, '')
-
-        await session.run(params.create_dataframe_code)
-        capsys.readouterr()
-
-        await session.run(params.dataframe_count_code)
-        assert capsys.readouterr() == (params.dataframe_count_output, '')
-
-        with pytest.raises(SparkRuntimeError):
-            await session.run(params.error_code)
-
-        expected = pandas.DataFrame({'value': range(100)})
-        assert (await session.read('df')).equals(expected)
-
-    assert await session_stopped(session.session_id)
+    assert session_stopped(session.session_id)
 
 
 SQL_CREATE_VIEW = """
@@ -162,9 +126,9 @@ CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
 """
 
 
-def test_sql_session_sync():
+def test_sql_session():
 
-    assert run_sync(livy_available())
+    assert livy_available()
 
     with LivySession(LIVY_URL, kind=SessionKind.SQL) as session:
 
@@ -180,26 +144,4 @@ def test_sql_session_sync():
         expected = pandas.DataFrame({'id': range(100)})
         assert session.read_sql('SELECT * FROM view').equals(expected)
 
-    assert run_sync(session_stopped(session.session_id))
-
-
-@pytest.mark.asyncio
-async def test_sql_session_async():
-
-    assert await livy_available()
-
-    async with AsyncLivySession(LIVY_URL, kind=SessionKind.SQL) as session:
-
-        assert (await session.state) == SessionState.IDLE
-
-        await session.run(SQL_CREATE_VIEW)
-        output = await session.run('SELECT COUNT(*) FROM view')
-        assert output.json['data'] == [[100]]
-
-        with pytest.raises(SparkRuntimeError):
-            await session.run('not valid SQL!')
-
-        expected = pandas.DataFrame({'id': range(100)})
-        assert (await session.read_sql('SELECT * FROM view')).equals(expected)
-
-    assert await session_stopped(session.session_id)
+    assert session_stopped(session.session_id)
