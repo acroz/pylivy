@@ -124,6 +124,8 @@ class LivySession:
         code = serialise_dataframe_code(dataframe_name, self.kind)
         output = self._execute(code)
         output.raise_for_status()
+        if output.text is None:
+            raise RuntimeError('statement had no text output')
         return deserialise_dataframe(output.text)
 
     def read_sql(self, code: str) -> pandas.DataFrame:
@@ -131,9 +133,14 @@ class LivySession:
             raise ValueError('not a SQL session')
         output = self._execute(code)
         output.raise_for_status()
+        if output.json is None:
+            raise RuntimeError('statement had no JSON output')
         return dataframe_from_json_output(output.json)
 
     def _execute(self, code: str) -> Output:
+        if self.session_id is None:
+            raise ValueError('session not yet started')
+
         statement = self.client.create_statement(self.session_id, code)
 
         not_finished = {StatementState.WAITING, StatementState.RUNNING}
@@ -144,5 +151,8 @@ class LivySession:
             statement = self.client.get_statement(
                 statement.session_id, statement.statement_id
             )
+
+        if statement.output is None:
+            raise RuntimeError('statement had no output')
 
         return statement.output
