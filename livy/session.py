@@ -108,7 +108,8 @@ class LivySession:
         return session.state
 
     def close(self) -> None:
-        self.client.delete_session(self.session_id)
+        if self.session_id is not None:
+            self.client.delete_session(self.session_id)
         self.client.close()
 
     def run(self, code: str) -> Output:
