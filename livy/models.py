@@ -41,7 +41,10 @@ class Version:
 
 class SparkRuntimeError(Exception):
 
-    def __init__(self, ename: str, evalue: str, traceback: List[str]) -> None:
+    def __init__(
+        self, ename: Optional[str], evalue: Optional[str],
+        traceback: Optional[List[str]]
+    ) -> None:
         self.ename = ename
         self.evalue = evalue
         self.traceback = traceback
