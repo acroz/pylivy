@@ -85,7 +85,7 @@ class LivyClient:
         data = self._client.post('/sessions', data={'kind': kind.value})
         return Session.from_json(data)
 
-    def get_session(self, session_id: int) -> Session:
+    def get_session(self, session_id: int) -> Optional[Session]:
         try:
             data = self._client.get(f'/sessions/{session_id}')
         except requests.HTTPError as e:
