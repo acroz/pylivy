@@ -25,6 +25,7 @@ def serialise_dataframe_code(
         template = {
             SessionKind.SPARK: SERIALISE_DATAFRAME_TEMPLATE_SPARK,
             SessionKind.PYSPARK: SERIALISE_DATAFRAME_TEMPLATE_PYSPARK,
+            SessionKind.PYSPARK3: SERIALISE_DATAFRAME_TEMPLATE_PYSPARK,
             SessionKind.SPARKR: SERIALISE_DATAFRAME_TEMPLATE_SPARKR
         }[session_kind]
     except KeyError:
