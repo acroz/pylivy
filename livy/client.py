@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -69,8 +69,9 @@ class LivyClient:
         data = self._client.get('/sessions')
         return [Session.from_json(item) for item in data['sessions']]
 
-    def create_session(self, kind: SessionKind) -> Session:
-
+    def create_session(
+            self, kind: SessionKind, spark_conf: Dict[str, Any]=None
+    ) -> Session:
         if self.legacy_server():
             valid_kinds = VALID_LEGACY_SESSION_KINDS
         else:
@@ -82,7 +83,11 @@ class LivyClient:
                 f'this version (should be one of {valid_kinds})'
             )
 
-        data = self._client.post('/sessions', data={'kind': kind.value})
+        body = {'kind': kind.value}
+        if spark_conf is not None:
+            body['conf'] = spark_conf
+
+        data = self._client.post('/sessions', data=body)
         return Session.from_json(data)
 
     def get_session(self, session_id: int) -> Optional[Session]:
