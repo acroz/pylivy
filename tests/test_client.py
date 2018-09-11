@@ -13,6 +13,10 @@ MOCK_SESSION_ID = 5
 MOCK_STATEMENT_JSON = {'mock': 'statement'}
 MOCK_STATEMENT_ID = 12
 MOCK_CODE = 'mock code'
+MOCK_SPARK_CONF = {
+    "spark.master": "yarn",
+    "spark.submit.deployMode": "client"
+}
 
 
 def mock_livy_server():
@@ -33,7 +37,10 @@ def mock_livy_server():
 
     @app.route('/sessions', methods=['POST'])
     def create_session():
-        assert request.get_json() == {'kind': 'pyspark'}
+        assert request.get_json() == {
+            'kind': 'pyspark',
+            'conf': MOCK_SPARK_CONF
+        }
         return jsonify(MOCK_SESSION_JSON)
 
     @app.route(f'/sessions/{MOCK_SESSION_ID}', methods=['DELETE'])
@@ -92,7 +99,10 @@ def test_create_session(mocker, server):
     mocker.patch.object(Session, 'from_json')
 
     client = LivyClient(server)
-    session = client.create_session(SessionKind.PYSPARK)
+    session = client.create_session(
+        SessionKind.PYSPARK,
+        spark_conf=MOCK_SPARK_CONF
+    )
 
     assert session == Session.from_json.return_value
     Session.from_json.assert_called_once_with(MOCK_SESSION_JSON)
