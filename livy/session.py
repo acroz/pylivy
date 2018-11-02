@@ -74,9 +74,9 @@ class LivySession:
 
     def __init__(
         self, url: str, kind: SessionKind=SessionKind.PYSPARK,
-        spark_conf: Dict[str, Any]=None, echo: bool=True, check: bool=True
+        spark_conf: Dict[str, Any]=None, echo: bool=True, check: bool=True, auth: dict=None
     ) -> None:
-        self.client = LivyClient(url)
+        self.client = LivyClient(url=url, auth=auth)
         self.kind = kind
         self.echo = echo
         self.check = check
