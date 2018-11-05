@@ -21,14 +21,19 @@ VALID_SESSION_KINDS = {
 
 class JsonClient:
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, auth: dict=None) -> None:
         self.url = url
         self.session = requests.Session()
+        if auth is not None:
+            self.session.auth = auth
 
     def close(self) -> None:
         self.session.close()
 
     def get(self, endpoint: str='') -> dict:
+# Necessary due to https://issues.apache.org/jira/browse/KNOX-1098
+#        data = {'proxyUser': 'foobar'}
+#        return self._request('GET', endpoint, data)
         return self._request('GET', endpoint)
 
     def post(self, endpoint: str, data: dict=None) -> dict:
@@ -48,9 +53,10 @@ class JsonClient:
 
 class LivyClient:
 
-    def __init__(self, url: str) -> None:
-        self._client = JsonClient(url)
+    def __init__(self, url: str, auth: dict=None) -> None:
+        self._client = JsonClient(url, auth)
         self._server_version_cache: Optional[Version] = None
+        self.auth = auth
 
     def close(self) -> None:
         self._client.close()
@@ -84,6 +90,9 @@ class LivyClient:
             )
 
         body = {'kind': kind.value}
+        # proxyUser foobar necessary due to - https://issues.apache.org/jira/browse/KNOX-1098
+        if self.auth is not None:
+            body['proxyUser'] = 'foobar'
         if spark_conf is not None:
             body['conf'] = spark_conf
 

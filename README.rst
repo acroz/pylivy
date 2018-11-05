@@ -25,3 +25,19 @@ Usage
         session.run("filtered = df.filter(df.name == 'Bob')")
         # Retrieve the result
         local_df = session.read('filtered')
+
+.. code:: python
+
+    # Authenticated against a knox/livy/spark server
+
+    LIVY_URL = os.environ.get('LIVY_TEST_URL_KNOX', 'https://knox.livy.spark.example.com/gateway/kerbtest2/livy/v1/')
+    username = os.environ.get('USERNAME', 'user')
+    passwd = os.environ.get('PASSWORD', 'password')
+    auth = (username, passwd)
+    from livy import LivySession
+
+    with LivySession(LIVY_URL,auth=auth) as session:
+        # Run some code on the remote cluster
+        session.run("filtered = df.filter(df.name == 'Bob')")
+        # Retrieve the result
+        local_df = session.read('filtered')
