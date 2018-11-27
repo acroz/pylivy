@@ -1,9 +1,12 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Union, Dict, List, Tuple, Optional
 
 import requests
 
 from livy.models import Version, Session, SessionKind, Statement, StatementKind
+
+
+Auth = Union[requests.auth.AuthBase, Tuple[str, str]]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -21,24 +24,26 @@ VALID_SESSION_KINDS = {
 
 class JsonClient:
 
-    def __init__(self, url: str) -> None:
+    def __init__(self, url: str, auth: Auth = None) -> None:
         self.url = url
         self.session = requests.Session()
+        if auth is not None:
+            self.session.auth = auth
 
     def close(self) -> None:
         self.session.close()
 
-    def get(self, endpoint: str='') -> dict:
+    def get(self, endpoint: str = '') -> dict:
         return self._request('GET', endpoint)
 
-    def post(self, endpoint: str, data: dict=None) -> dict:
+    def post(self, endpoint: str, data: dict = None) -> dict:
         return self._request('POST', endpoint, data)
 
-    def delete(self, endpoint: str='') -> dict:
+    def delete(self, endpoint: str = '') -> dict:
         return self._request('DELETE', endpoint)
 
     def _request(
-        self, method: str, endpoint: str, data: dict=None
+        self, method: str, endpoint: str, data: dict = None
     ) -> dict:
         url = self.url.rstrip('/') + endpoint
         response = self.session.request(method, url, json=data)
@@ -48,8 +53,8 @@ class JsonClient:
 
 class LivyClient:
 
-    def __init__(self, url: str) -> None:
-        self._client = JsonClient(url)
+    def __init__(self, url: str, auth: Auth = None) -> None:
+        self._client = JsonClient(url, auth)
         self._server_version_cache: Optional[Version] = None
 
     def close(self) -> None:
@@ -70,7 +75,7 @@ class LivyClient:
         return [Session.from_json(item) for item in data['sessions']]
 
     def create_session(
-            self, kind: SessionKind, spark_conf: Dict[str, Any]=None
+            self, kind: SessionKind, spark_conf: Dict[str, Any] = None
     ) -> Session:
         if self.legacy_server():
             valid_kinds = VALID_LEGACY_SESSION_KINDS
@@ -111,7 +116,7 @@ class LivyClient:
         ]
 
     def create_statement(
-        self, session_id: int, code: str, kind: StatementKind=None
+        self, session_id: int, code: str, kind: StatementKind = None
     ) -> Statement:
 
         data = {'code': code}
