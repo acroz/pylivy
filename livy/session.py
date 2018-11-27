@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, Iterator, Optional
 
 import pandas
 
-from livy.client import LivyClient
+from livy.client import LivyClient, Auth
 from livy.models import SessionKind, SessionState, StatementState, Output
 
 
@@ -73,11 +73,11 @@ def polling_intervals(
 class LivySession:
 
     def __init__(
-        self, url: str, kind: SessionKind = SessionKind.PYSPARK,
+        self, url: str, auth: Auth, kind: SessionKind = SessionKind.PYSPARK,
         spark_conf: Dict[str, Any] = None, echo: bool = True,
         check: bool = True
     ) -> None:
-        self.client = LivyClient(url)
+        self.client = LivyClient(url, auth)
         self.kind = kind
         self.echo = echo
         self.check = check
