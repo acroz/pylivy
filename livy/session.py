@@ -54,7 +54,7 @@ def dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
 
 
 def polling_intervals(
-    start: Iterable[float], rest: float, max_duration: float=None
+    start: Iterable[float], rest: float, max_duration: float = None
 ) -> Iterator[float]:
 
     def _intervals():
@@ -73,8 +73,9 @@ def polling_intervals(
 class LivySession:
 
     def __init__(
-        self, url: str, kind: SessionKind=SessionKind.PYSPARK,
-        spark_conf: Dict[str, Any]=None, echo: bool=True, check: bool=True
+        self, url: str, kind: SessionKind = SessionKind.PYSPARK,
+        spark_conf: Dict[str, Any] = None, echo: bool = True,
+        check: bool = True
     ) -> None:
         self.client = LivyClient(url)
         self.kind = kind
