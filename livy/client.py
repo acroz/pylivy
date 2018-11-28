@@ -76,7 +76,10 @@ class LivyClient:
         return [Session.from_json(item) for item in data["sessions"]]
 
     def create_session(
-        self, kind: SessionKind, spark_conf: Dict[str, Any] = None
+        self,
+        kind: SessionKind,
+        proxy_user: str = None,
+        spark_conf: Dict[str, Any] = None,
     ) -> Session:
         if self.legacy_server():
             valid_kinds = VALID_LEGACY_SESSION_KINDS
@@ -90,6 +93,8 @@ class LivyClient:
             )
 
         body = {"kind": kind.value}
+        if proxy_user is not None:
+            body["proxyUser"] = proxy_user
         if spark_conf is not None:
             body["conf"] = spark_conf
 
