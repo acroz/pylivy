@@ -25,3 +25,16 @@ Usage
         session.run("filtered = df.filter(df.name == 'Bob')")
         # Retrieve the result
         local_df = session.read('filtered')
+
+Authenticate requests sent to Livy by passing `any requests Auth object
+<http://docs.python-requests.org/en/master/user/authentication/>`_ to the
+LivySession. For example, to perform HTTP basic auth do:
+
+.. code:: python
+
+    from requests.auth import HTTPBasicAuth
+
+    auth = HTTPBasicAuth('username', 'password')
+
+    with LivySession(LIVY_URL, auth) as session:
+        ...
