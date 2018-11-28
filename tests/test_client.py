@@ -15,6 +15,7 @@ MOCK_SESSION_ID = 5
 MOCK_STATEMENT_JSON = {"mock": "statement"}
 MOCK_STATEMENT_ID = 12
 MOCK_CODE = "mock code"
+MOCK_PROXY_USER = "proxy-user"
 MOCK_SPARK_CONF = {"spark.master": "yarn", "spark.submit.deployMode": "client"}
 
 
@@ -73,6 +74,7 @@ def mock_livy_server(auth_type):
     def create_session():
         assert request.get_json() == {
             "kind": "pyspark",
+            "proxyUser": MOCK_PROXY_USER,
             "conf": MOCK_SPARK_CONF,
         }
         return jsonify(MOCK_SESSION_JSON)
@@ -146,7 +148,9 @@ def test_create_session(mocker, server, auth):
 
     client = LivyClient(server, auth)
     session = client.create_session(
-        SessionKind.PYSPARK, spark_conf=MOCK_SPARK_CONF
+        SessionKind.PYSPARK,
+        proxy_user=MOCK_PROXY_USER,
+        spark_conf=MOCK_SPARK_CONF,
     )
 
     assert session == Session.from_json.return_value

@@ -41,9 +41,14 @@ def test_version_equals(first, second):
 
 def test_session_from_json():
 
-    session_json = {"id": 5, "kind": "pyspark", "state": "idle"}
+    session_json = {
+        "id": 5,
+        "proxyUser": "user",
+        "kind": "pyspark",
+        "state": "idle",
+    }
 
-    expected = Session(5, SessionKind.PYSPARK, SessionState.IDLE)
+    expected = Session(5, "user", SessionKind.PYSPARK, SessionState.IDLE)
 
     assert Session.from_json(session_json) == expected
 
