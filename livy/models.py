@@ -143,11 +143,15 @@ class SessionState(Enum):
 
 class Session(NamedTuple):
     session_id: int
+    proxy_user: str
     kind: SessionKind
     state: SessionState
 
     @classmethod
     def from_json(cls, data: dict) -> "Session":
         return cls(
-            data["id"], SessionKind(data["kind"]), SessionState(data["state"])
+            data["id"],
+            data["proxyUser"],
+            SessionKind(data["kind"]),
+            SessionState(data["state"]),
         )
