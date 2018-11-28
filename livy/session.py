@@ -73,7 +73,8 @@ def polling_intervals(
 class LivySession:
 
     def __init__(
-        self, url: str, auth: Auth, kind: SessionKind = SessionKind.PYSPARK,
+        self, url: str, auth: Auth = None,
+        kind: SessionKind = SessionKind.PYSPARK,
         spark_conf: Dict[str, Any] = None, echo: bool = True,
         check: bool = True
     ) -> None:
