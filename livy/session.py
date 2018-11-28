@@ -8,7 +8,7 @@ from livy.client import LivyClient, Auth
 from livy.models import SessionKind, SessionState, StatementState, Output
 
 
-SERIALISE_DATAFRAME_TEMPLATE_SPARK = '{}.toJSON.collect.foreach(println)'
+SERIALISE_DATAFRAME_TEMPLATE_SPARK = "{}.toJSON.collect.foreach(println)"
 SERIALISE_DATAFRAME_TEMPLATE_PYSPARK = """
 for _livy_client_serialised_row in {}.toJSON().collect():
     print(_livy_client_serialised_row)
@@ -26,18 +26,18 @@ def serialise_dataframe_code(
             SessionKind.SPARK: SERIALISE_DATAFRAME_TEMPLATE_SPARK,
             SessionKind.PYSPARK: SERIALISE_DATAFRAME_TEMPLATE_PYSPARK,
             SessionKind.PYSPARK3: SERIALISE_DATAFRAME_TEMPLATE_PYSPARK,
-            SessionKind.SPARKR: SERIALISE_DATAFRAME_TEMPLATE_SPARKR
+            SessionKind.SPARKR: SERIALISE_DATAFRAME_TEMPLATE_SPARKR,
         }[session_kind]
     except KeyError:
         raise RuntimeError(
-            f'read not supported for sessions of kind {session_kind}'
+            f"read not supported for sessions of kind {session_kind}"
         )
     return template.format(dataframe_name)
 
 
 def deserialise_dataframe(text: str) -> pandas.DataFrame:
     rows = []
-    for line in text.split('\n'):
+    for line in text.split("\n"):
         if line:
             rows.append(json.loads(line))
     return pandas.DataFrame.from_records(rows)
@@ -45,18 +45,17 @@ def deserialise_dataframe(text: str) -> pandas.DataFrame:
 
 def dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     try:
-        fields = json_output['schema']['fields']
-        columns = [field['name'] for field in fields]
-        data = json_output['data']
+        fields = json_output["schema"]["fields"]
+        columns = [field["name"] for field in fields]
+        data = json_output["data"]
     except KeyError:
-        raise ValueError('json output does not match expected structure')
+        raise ValueError("json output does not match expected structure")
     return pandas.DataFrame(data, columns=columns)
 
 
 def polling_intervals(
     start: Iterable[float], rest: float, max_duration: float = None
 ) -> Iterator[float]:
-
     def _intervals():
         yield from start
         while True:
@@ -71,12 +70,14 @@ def polling_intervals(
 
 
 class LivySession:
-
     def __init__(
-        self, url: str, auth: Auth = None,
+        self,
+        url: str,
+        auth: Auth = None,
         kind: SessionKind = SessionKind.PYSPARK,
-        spark_conf: Dict[str, Any] = None, echo: bool = True,
-        check: bool = True
+        spark_conf: Dict[str, Any] = None,
+        echo: bool = True,
+        check: bool = True,
     ) -> None:
         self.client = LivyClient(url, auth)
         self.kind = kind
@@ -85,7 +86,7 @@ class LivySession:
         self.session_id: Optional[int] = None
         self.spark_conf = spark_conf
 
-    def __enter__(self) -> 'LivySession':
+    def __enter__(self) -> "LivySession":
         self.start()
         return self
 
@@ -105,10 +106,10 @@ class LivySession:
     @property
     def state(self) -> SessionState:
         if self.session_id is None:
-            raise ValueError('session not yet started')
+            raise ValueError("session not yet started")
         session = self.client.get_session(self.session_id)
         if session is None:
-            raise ValueError('session not found - it may have been shut down')
+            raise ValueError("session not found - it may have been shut down")
         return session.state
 
     def close(self) -> None:
@@ -129,21 +130,21 @@ class LivySession:
         output = self._execute(code)
         output.raise_for_status()
         if output.text is None:
-            raise RuntimeError('statement had no text output')
+            raise RuntimeError("statement had no text output")
         return deserialise_dataframe(output.text)
 
     def read_sql(self, code: str) -> pandas.DataFrame:
         if self.kind != SessionKind.SQL:
-            raise ValueError('not a SQL session')
+            raise ValueError("not a SQL session")
         output = self._execute(code)
         output.raise_for_status()
         if output.json is None:
-            raise RuntimeError('statement had no JSON output')
+            raise RuntimeError("statement had no JSON output")
         return dataframe_from_json_output(output.json)
 
     def _execute(self, code: str) -> Output:
         if self.session_id is None:
-            raise ValueError('session not yet started')
+            raise ValueError("session not yet started")
 
         statement = self.client.create_statement(self.session_id, code)
 
@@ -157,6 +158,6 @@ class LivySession:
             )
 
         if statement.output is None:
-            raise RuntimeError('statement had no output')
+            raise RuntimeError("statement had no output")
 
         return statement.output

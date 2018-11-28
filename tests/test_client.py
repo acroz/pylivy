@@ -10,15 +10,12 @@ from livy.client import LivyClient
 from livy.models import Session, SessionKind, Statement, StatementKind
 
 
-MOCK_SESSION_JSON = {'mock': 'session'}
+MOCK_SESSION_JSON = {"mock": "session"}
 MOCK_SESSION_ID = 5
-MOCK_STATEMENT_JSON = {'mock': 'statement'}
+MOCK_STATEMENT_JSON = {"mock": "statement"}
 MOCK_STATEMENT_ID = 12
-MOCK_CODE = 'mock code'
-MOCK_SPARK_CONF = {
-    "spark.master": "yarn",
-    "spark.submit.deployMode": "client"
-}
+MOCK_CODE = "mock code"
+MOCK_SPARK_CONF = {"spark.master": "yarn", "spark.submit.deployMode": "client"}
 
 
 class AuthType(Enum):
@@ -34,7 +31,7 @@ BASIC_AUTH_PASSWORD = "basic-auth-password"
 REQUESTS_AUTH_VALUES = {
     AuthType.NONE: None,
     AuthType.BASIC_AUTH_TUPLE: (BASIC_AUTH_USER, BASIC_AUTH_PASSWORD),
-    AuthType.BASIC_AUTH: HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASSWORD)
+    AuthType.BASIC_AUTH: HTTPBasicAuth(BASIC_AUTH_USER, BASIC_AUTH_PASSWORD),
 }
 
 
@@ -47,7 +44,7 @@ def validate_basic_auth(request):
 FLASK_AUTH_VALIDATORS = {
     AuthType.NONE: lambda _: None,
     AuthType.BASIC_AUTH_TUPLE: validate_basic_auth,
-    AuthType.BASIC_AUTH: validate_basic_auth
+    AuthType.BASIC_AUTH: validate_basic_auth,
 }
 
 
@@ -60,60 +57,59 @@ def mock_livy_server(auth_type):
         validator = FLASK_AUTH_VALIDATORS[auth_type]
         validator(request)
 
-    @app.route('/version')
+    @app.route("/version")
     def version():
-        return jsonify({'version': '0.5.0-incubating'})
+        return jsonify({"version": "0.5.0-incubating"})
 
-    @app.route('/sessions')
+    @app.route("/sessions")
     def list_sessions():
-        return jsonify({'sessions': [MOCK_SESSION_JSON]})
+        return jsonify({"sessions": [MOCK_SESSION_JSON]})
 
-    @app.route(f'/sessions/{MOCK_SESSION_ID}')
+    @app.route(f"/sessions/{MOCK_SESSION_ID}")
     def get_session():
         return jsonify(MOCK_SESSION_JSON)
 
-    @app.route('/sessions', methods=['POST'])
+    @app.route("/sessions", methods=["POST"])
     def create_session():
         assert request.get_json() == {
-            'kind': 'pyspark',
-            'conf': MOCK_SPARK_CONF
+            "kind": "pyspark",
+            "conf": MOCK_SPARK_CONF,
         }
         return jsonify(MOCK_SESSION_JSON)
 
-    @app.route(f'/sessions/{MOCK_SESSION_ID}', methods=['DELETE'])
+    @app.route(f"/sessions/{MOCK_SESSION_ID}", methods=["DELETE"])
     def delete_session():
-        return jsonify({'msg': 'deleted'})
+        return jsonify({"msg": "deleted"})
 
-    @app.route(f'/sessions/{MOCK_SESSION_ID}/statements')
+    @app.route(f"/sessions/{MOCK_SESSION_ID}/statements")
     def list_statements():
-        return jsonify({'statements': [MOCK_STATEMENT_JSON]})
+        return jsonify({"statements": [MOCK_STATEMENT_JSON]})
 
-    @app.route(f'/sessions/{MOCK_SESSION_ID}/statements/{MOCK_STATEMENT_ID}')
+    @app.route(f"/sessions/{MOCK_SESSION_ID}/statements/{MOCK_STATEMENT_ID}")
     def get_statement():
         return jsonify(MOCK_STATEMENT_JSON)
 
-    @app.route(f'/sessions/{MOCK_SESSION_ID}/statements', methods=['POST'])
+    @app.route(f"/sessions/{MOCK_SESSION_ID}/statements", methods=["POST"])
     def create_statement():
-        assert request.get_json() == {'code': MOCK_CODE, 'kind': 'pyspark'}
+        assert request.get_json() == {"code": MOCK_CODE, "kind": "pyspark"}
         return jsonify(MOCK_STATEMENT_JSON)
 
     app.run()
 
 
-@pytest.fixture(scope='session', params=AuthType, ids=lambda t: t.name)
+@pytest.fixture(scope="session", params=AuthType, ids=lambda t: t.name)
 def auth_type(request):
     return request.param
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def server(auth_type):
     process = multiprocessing.Process(
-        target=mock_livy_server,
-        args=(auth_type,)
+        target=mock_livy_server, args=(auth_type,)
     )
     process.start()
     time.sleep(0.1)
-    yield 'http://localhost:5000'
+    yield "http://localhost:5000"
     process.terminate()
 
 
@@ -124,7 +120,7 @@ def auth(auth_type):
 
 def test_list_sessions(mocker, server, auth):
 
-    mocker.patch.object(Session, 'from_json')
+    mocker.patch.object(Session, "from_json")
 
     client = LivyClient(server, auth)
     sessions = client.list_sessions()
@@ -135,7 +131,7 @@ def test_list_sessions(mocker, server, auth):
 
 def test_get_session(mocker, server, auth):
 
-    mocker.patch.object(Session, 'from_json')
+    mocker.patch.object(Session, "from_json")
 
     client = LivyClient(server, auth)
     session = client.get_session(MOCK_SESSION_ID)
@@ -146,12 +142,11 @@ def test_get_session(mocker, server, auth):
 
 def test_create_session(mocker, server, auth):
 
-    mocker.patch.object(Session, 'from_json')
+    mocker.patch.object(Session, "from_json")
 
     client = LivyClient(server, auth)
     session = client.create_session(
-        SessionKind.PYSPARK,
-        spark_conf=MOCK_SPARK_CONF
+        SessionKind.PYSPARK, spark_conf=MOCK_SPARK_CONF
     )
 
     assert session == Session.from_json.return_value
@@ -165,45 +160,40 @@ def test_delete_session(mocker, server, auth):
 
 def test_list_statements(mocker, server, auth):
 
-    mocker.patch.object(Statement, 'from_json')
+    mocker.patch.object(Statement, "from_json")
 
     client = LivyClient(server, auth)
     statements = client.list_statements(MOCK_SESSION_ID)
 
     assert statements == [Statement.from_json.return_value]
     Statement.from_json.assert_called_once_with(
-        MOCK_SESSION_ID,
-        MOCK_STATEMENT_JSON
+        MOCK_SESSION_ID, MOCK_STATEMENT_JSON
     )
 
 
 def test_get_statement(mocker, server, auth):
 
-    mocker.patch.object(Statement, 'from_json')
+    mocker.patch.object(Statement, "from_json")
 
     client = LivyClient(server, auth)
     statement = client.get_statement(MOCK_SESSION_ID, MOCK_STATEMENT_ID)
 
     assert statement == Statement.from_json.return_value
     Statement.from_json.assert_called_once_with(
-        MOCK_SESSION_ID,
-        MOCK_STATEMENT_JSON
+        MOCK_SESSION_ID, MOCK_STATEMENT_JSON
     )
 
 
 def test_create_statement(mocker, server, auth):
 
-    mocker.patch.object(Statement, 'from_json')
+    mocker.patch.object(Statement, "from_json")
 
     client = LivyClient(server, auth)
     statement = client.create_statement(
-        MOCK_SESSION_ID,
-        MOCK_CODE,
-        StatementKind.PYSPARK
+        MOCK_SESSION_ID, MOCK_CODE, StatementKind.PYSPARK
     )
 
     assert statement == Statement.from_json.return_value
     Statement.from_json.assert_called_once_with(
-        MOCK_SESSION_ID,
-        MOCK_STATEMENT_JSON
+        MOCK_SESSION_ID, MOCK_STATEMENT_JSON
     )
