@@ -64,20 +64,14 @@ class OutputStatus(Enum):
     ERROR = "error"
 
 
-_Output = NamedTuple(
-    "_Output",
-    [
-        ("status", OutputStatus),
-        ("text", Optional[str]),
-        ("json", Optional[dict]),
-        ("ename", Optional[str]),
-        ("evalue", Optional[str]),
-        ("traceback", Optional[List[str]]),
-    ],
-)
+class Output(NamedTuple):
+    status: OutputStatus
+    text: Optional[str]
+    json: Optional[dict]
+    ename: Optional[str]
+    evalue: Optional[str]
+    traceback: Optional[List[str]]
 
-
-class Output(_Output):
     @classmethod
     def from_json(cls, data: dict) -> "Output":
         return cls(
@@ -110,18 +104,12 @@ class StatementState(Enum):
     CANCELLED = "cancelled"
 
 
-_Statement = NamedTuple(
-    "_Statement",
-    [
-        ("session_id", int),
-        ("statement_id", int),
-        ("state", StatementState),
-        ("output", Optional[Output]),
-    ],
-)
+class Statement(NamedTuple):
+    session_id: int
+    statement_id: int
+    state: StatementState
+    output: Optional[Output]
 
-
-class Statement(_Statement):
     @classmethod
     def from_json(cls, session_id: int, data: dict) -> "Statement":
         if data["output"] is None:
@@ -153,13 +141,11 @@ class SessionState(Enum):
     SUCCESS = "success"
 
 
-_Session = NamedTuple(
-    "_Session",
-    [("session_id", int), ("kind", SessionKind), ("state", SessionState)],
-)
+class Session(NamedTuple):
+    session_id: int
+    kind: SessionKind
+    state: SessionState
 
-
-class Session(_Session):
     @classmethod
     def from_json(cls, data: dict) -> "Session":
         return cls(
