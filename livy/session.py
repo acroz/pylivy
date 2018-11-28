@@ -75,16 +75,18 @@ class LivySession:
         url: str,
         auth: Auth = None,
         kind: SessionKind = SessionKind.PYSPARK,
+        proxy_user: str = None,
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
     ) -> None:
         self.client = LivyClient(url, auth)
         self.kind = kind
+        self.proxy_user = proxy_user
+        self.spark_conf = spark_conf
         self.echo = echo
         self.check = check
         self.session_id: Optional[int] = None
-        self.spark_conf = spark_conf
 
     def __enter__(self) -> "LivySession":
         self.start()
@@ -94,7 +96,9 @@ class LivySession:
         self.close()
 
     def start(self) -> None:
-        session = self.client.create_session(self.kind, self.spark_conf)
+        session = self.client.create_session(
+            self.kind, self.proxy_user, self.spark_conf
+        )
         self.session_id = session.session_id
 
         not_ready = {SessionState.NOT_STARTED, SessionState.STARTING}
