@@ -152,10 +152,17 @@ class LivySession:
 
         statement = self.client.create_statement(self.session_id, code)
 
-        not_finished = {StatementState.WAITING, StatementState.RUNNING}
         intervals = polling_intervals([0.1, 0.2, 0.3, 0.5], 1.0)
 
-        while statement.state in not_finished:
+        def waiting_for_output(statement):
+            not_finished = statement.state in {
+                StatementState.WAITING,
+                StatementState.RUNNING,
+            }
+            available = statement.state == StatementState.AVAILABLE
+            return not_finished or (available and statement.output is None)
+
+        while waiting_for_output(statement):
             time.sleep(next(intervals))
             statement = self.client.get_statement(
                 statement.session_id, statement.statement_id
