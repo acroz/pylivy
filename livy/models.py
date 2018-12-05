@@ -1,7 +1,8 @@
 import re
+from dataclasses import dataclass
 from enum import Enum
 from functools import total_ordering
-from typing import NamedTuple, Optional, List
+from typing import Optional, List
 
 
 @total_ordering
@@ -64,7 +65,8 @@ class OutputStatus(Enum):
     ERROR = "error"
 
 
-class Output(NamedTuple):
+@dataclass
+class Output:
     status: OutputStatus
     text: Optional[str]
     json: Optional[dict]
@@ -104,7 +106,8 @@ class StatementState(Enum):
     CANCELLED = "cancelled"
 
 
-class Statement(NamedTuple):
+@dataclass
+class Statement:
     session_id: int
     statement_id: int
     state: StatementState
@@ -141,7 +144,8 @@ class SessionState(Enum):
     SUCCESS = "success"
 
 
-class Session(NamedTuple):
+@dataclass
+class Session:
     session_id: int
     proxy_user: str
     kind: SessionKind
