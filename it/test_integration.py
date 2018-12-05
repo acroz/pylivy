@@ -1,5 +1,5 @@
 import os
-from collections import namedtuple
+from dataclasses import dataclass
 
 import pytest
 import requests
@@ -25,17 +25,14 @@ def session_stopped(session_id):
         return response.get_json()['state'] == 'shutting_down'
 
 
-Parameters = namedtuple(
-    'Parameters',
-    [
-        'print_foo_code',
-        'print_foo_output',
-        'create_dataframe_code',
-        'dataframe_count_code',
-        'dataframe_count_output',
-        'error_code'
-    ]
-)
+@dataclass
+class Parameters:
+    print_foo_code: str
+    print_foo_output: str
+    create_dataframe_code: str
+    dataframe_count_code: str
+    dataframe_count_output: str
+    error_code: str
 
 
 SPARK_CREATE_DF = """

@@ -58,6 +58,7 @@ setup(
         'it': IntegrationTests
     },
     install_requires=[
+        "dataclasses; python_version<'3.7'",
         'requests',
         'pandas'
     ],
