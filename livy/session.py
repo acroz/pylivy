@@ -70,6 +70,18 @@ def polling_intervals(
 
 
 class LivySession:
+    """Manages a remote Livy session and high-level interactions with it.
+
+    :param url: The URL of the Livy server.
+    :param kind: The kind of session to create.
+    :param proxy_user: User to impersonate when starting the session.
+    :param spark_conf: Spark configuration properties.
+    :param echo: Whether to echo output printed in the remote session. Defaults
+        to ``True``.
+    :param check: Whether to raise an exception when a statement in the remote
+        session fails. Defaults to ``True``.
+    """
+
     def __init__(
         self,
         url: str,
@@ -96,6 +108,8 @@ class LivySession:
         self.close()
 
     def start(self) -> None:
+        """Create the remote Spark session and wait for it to be ready."""
+
         session = self.client.create_session(
             self.kind, self.proxy_user, self.spark_conf
         )
@@ -109,6 +123,7 @@ class LivySession:
 
     @property
     def state(self) -> SessionState:
+        """The state of the managed Spark session."""
         if self.session_id is None:
             raise ValueError("session not yet started")
         session = self.client.get_session(self.session_id)
@@ -117,11 +132,16 @@ class LivySession:
         return session.state
 
     def close(self) -> None:
+        """Kill the managed Spark session."""
         if self.session_id is not None:
             self.client.delete_session(self.session_id)
         self.client.close()
 
     def run(self, code: str) -> Output:
+        """Run some code in the managed Spark session.
+
+        :param code: The code to run.
+        """
         output = self._execute(code)
         if self.echo and output.text:
             print(output.text)
@@ -130,6 +150,10 @@ class LivySession:
         return output
 
     def read(self, dataframe_name: str) -> pandas.DataFrame:
+        """Evaluate and retrieve a Spark dataframe in the managed session.
+
+        :param dataframe_name: The name of the Spark dataframe to read.
+        """
         code = serialise_dataframe_code(dataframe_name, self.kind)
         output = self._execute(code)
         output.raise_for_status()
@@ -138,6 +162,10 @@ class LivySession:
         return deserialise_dataframe(output.text)
 
     def read_sql(self, code: str) -> pandas.DataFrame:
+        """Evaluate a Spark SQL satatement and retrieve the result.
+
+        :param code: The Spark SQL statement to evaluate.
+        """
         if self.kind != SessionKind.SQL:
             raise ValueError("not a SQL session")
         output = self._execute(code)

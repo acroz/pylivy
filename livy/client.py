@@ -28,6 +28,13 @@ VALID_SESSION_KINDS = {
 
 
 class JsonClient:
+    """A wrapper for a requests session for JSON formatted requests.
+
+    This client handles appending endpoints on to a common hostname,
+    deserialising the response as JSON and raising an exception when an error
+    HTTP code is received.
+    """
+
     def __init__(self, url: str, auth: Auth = None) -> None:
         self.url = url
         self.session = requests.Session()
@@ -54,24 +61,38 @@ class JsonClient:
 
 
 class LivyClient:
+    """A client for sending requests to a Livy server.
+
+    :param url: The URL of the Livy server.
+    :param auth: A requests-compatible auth object to use when making requests.
+    """
+
     def __init__(self, url: str, auth: Auth = None) -> None:
         self._client = JsonClient(url, auth)
         self._server_version_cache: Optional[Version] = None
 
     def close(self) -> None:
+        """Close the underlying requests session."""
         self._client.close()
 
     def server_version(self) -> Version:
+        """Get the version of Livy running on the server."""
         if self._server_version_cache is None:
             data = self._client.get("/version")
             self._server_version_cache = Version(data["version"])
         return self._server_version_cache
 
     def legacy_server(self) -> bool:
+        """Determine if the server is running a legacy version.
+
+        Legacy versions support different session kinds than newer versions of
+        Livy.
+        """
         version = self.server_version()
         return version < Version("0.5.0-incubating")
 
     def list_sessions(self) -> List[Session]:
+        """List all the active sessions in Livy."""
         data = self._client.get("/sessions")
         return [Session.from_json(item) for item in data["sessions"]]
 
@@ -81,6 +102,12 @@ class LivyClient:
         proxy_user: str = None,
         spark_conf: Dict[str, Any] = None,
     ) -> Session:
+        """Create a new session in Livy.
+
+        :param kind: The kind of session to create.
+        :param proxy_user: User to impersonate when starting the session.
+        :param spark_conf: Spark configuration properties.
+        """
         if self.legacy_server():
             valid_kinds = VALID_LEGACY_SESSION_KINDS
         else:
@@ -102,6 +129,10 @@ class LivyClient:
         return Session.from_json(data)
 
     def get_session(self, session_id: int) -> Optional[Session]:
+        """Get information about a session.
+
+        :param session_id: The ID of the session.
+        """
         try:
             data = self._client.get(f"/sessions/{session_id}")
         except requests.HTTPError as e:
@@ -112,9 +143,17 @@ class LivyClient:
         return Session.from_json(data)
 
     def delete_session(self, session_id: int) -> None:
+        """Kill a session.
+
+        :param session_id: The ID of the session.
+        """
         self._client.delete(f"/sessions/{session_id}")
 
     def list_statements(self, session_id: int) -> List[Statement]:
+        """Get all the statements in a session.
+
+        :param session_id: The ID of the session.
+        """
         response = self._client.get(f"/sessions/{session_id}/statements")
         return [
             Statement.from_json(session_id, data)
@@ -124,6 +163,12 @@ class LivyClient:
     def create_statement(
         self, session_id: int, code: str, kind: StatementKind = None
     ) -> Statement:
+        """Run a statement in a session.
+
+        :param session_id: The ID of the session.
+        :param code: The code to execute.
+        :param kind: The kind of code to execute.
+        """
 
         data = {"code": code}
 
@@ -138,6 +183,11 @@ class LivyClient:
         return Statement.from_json(session_id, response)
 
     def get_statement(self, session_id: int, statement_id: int) -> Statement:
+        """Get information about a statement in a session.
+
+        :param session_id: The ID of the session.
+        :param statement_id: The ID of the statement.
+        """
         response = self._client.get(
             f"/sessions/{session_id}/statements/{statement_id}"
         )

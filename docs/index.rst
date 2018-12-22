@@ -14,7 +14,8 @@ Python client for Livy, enabling easy remote code execution on a Spark cluster.
 Usage
 -----
 
-.. code:: python
+The :class:`LivySession <livy.session.LivySession>` class is the main interface
+provided by ``pylivy``::
 
     from livy import LivySession
 
@@ -28,9 +29,7 @@ Usage
 
 Authenticate requests sent to Livy by passing `any requests Auth object
 <http://docs.python-requests.org/en/master/user/authentication/>`_ to the
-LivySession. For example, to perform HTTP basic auth do:
-
-.. code:: python
+``LivySession``. For example, to perform HTTP basic auth do::
 
     from requests.auth import HTTPBasicAuth
 
@@ -39,3 +38,12 @@ LivySession. For example, to perform HTTP basic auth do:
     with LivySession(LIVY_URL, auth) as session:
         session.run("filtered = df.filter(df.name == 'Bob')")
         local_df = session.read('filtered')
+
+API Documenation
+----------------
+
+.. toctree::
+    :maxdepth: 2
+
+    api/session
+    api/client
