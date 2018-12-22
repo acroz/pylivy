@@ -37,4 +37,5 @@ LivySession. For example, to perform HTTP basic auth do:
     auth = HTTPBasicAuth('username', 'password')
 
     with LivySession(LIVY_URL, auth) as session:
-        ...
+        session.run("filtered = df.filter(df.name == 'Bob')")
+        local_df = session.read('filtered')
