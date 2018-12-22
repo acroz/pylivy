@@ -1,7 +1,0 @@
-API
-===
-
-.. toctree::
-
-    client
-    session
