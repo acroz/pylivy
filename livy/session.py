@@ -81,6 +81,7 @@ class LivySession:
     :param check: Whether to raise an exception when a statement in the remote
         session fails. Defaults to ``True``.
     """
+
     def __init__(
         self,
         url: str,
