@@ -11,6 +11,13 @@ pylivy
 for interacting with `Spark <http://spark.apache.org/>`_. ``pylivy`` is a
 Python client for Livy, enabling easy remote code execution on a Spark cluster.
 
+Installation
+------------
+
+.. code:: bash
+
+    $ pip install -U livy
+
 Documentation
 -------------
 
