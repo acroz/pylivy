@@ -13,6 +13,6 @@ script:
   - pip install flake8 mypy black .
   - flake8
   - mypy . --ignore-missing-imports
-  - black livy tests docs --check
+  - black livy tests docs setup.py --check
   - python setup.py test
   - python setup.py it
