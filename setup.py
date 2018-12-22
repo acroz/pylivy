@@ -66,5 +66,6 @@ setup(
         'pytest',
         'pytest-mock',
         'flask'
-    ]
+    ],
+    extras_require={'docs': ['sphinx-autodoc-typehints']}
 )
