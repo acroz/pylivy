@@ -86,7 +86,9 @@ html_theme = 'alabaster'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'description': 'Use Apache Livy from Python.'
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -156,7 +158,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'pylivy', 'pylivy Documentation',
-     author, 'pylivy', 'One line description of project.',
+     author, 'pylivy', 'Use Apache Livy from Python.',
      'Miscellaneous'),
 ]
 
