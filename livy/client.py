@@ -100,12 +100,14 @@ class LivyClient:
         self,
         kind: SessionKind,
         proxy_user: str = None,
+        jars: list() = None,
         spark_conf: Dict[str, Any] = None,
     ) -> Session:
         """Create a new session in Livy.
 
         :param kind: The kind of session to create.
         :param proxy_user: User to impersonate when starting the session.
+        :param jars: jars to be used in this session
         :param spark_conf: Spark configuration properties.
         """
         if self.legacy_server():
@@ -122,6 +124,8 @@ class LivyClient:
         body = {"kind": kind.value}
         if proxy_user is not None:
             body["proxyUser"] = proxy_user
+        if jars is not None:
+            body["jars"] = jars
         if spark_conf is not None:
             body["conf"] = spark_conf
 

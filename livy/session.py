@@ -75,6 +75,7 @@ class LivySession:
     :param url: The URL of the Livy server.
     :param kind: The kind of session to create.
     :param proxy_user: User to impersonate when starting the session.
+    :param jars: jars to be used in this session
     :param spark_conf: Spark configuration properties.
     :param echo: Whether to echo output printed in the remote session. Defaults
         to ``True``.
@@ -88,6 +89,7 @@ class LivySession:
         auth: Auth = None,
         kind: SessionKind = SessionKind.PYSPARK,
         proxy_user: str = None,
+        jars: list() = None,
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
@@ -95,6 +97,7 @@ class LivySession:
         self.client = LivyClient(url, auth)
         self.kind = kind
         self.proxy_user = proxy_user
+        self.jars = jars
         self.spark_conf = spark_conf
         self.echo = echo
         self.check = check
@@ -111,7 +114,7 @@ class LivySession:
         """Create the remote Spark session and wait for it to be ready."""
 
         session = self.client.create_session(
-            self.kind, self.proxy_user, self.spark_conf
+            self.kind, self.proxy_user, self.jars, self.spark_conf
         )
         self.session_id = session.session_id
 
