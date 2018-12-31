@@ -101,6 +101,16 @@ class LivyClient:
         kind: SessionKind,
         proxy_user: str = None,
         jars: list() = None,
+        py_files: list() = None,
+        files: list() = None,
+        driver_memory: str = None,
+        driver_cores: int = None,
+        executor_memory: str = None,
+        executor_cores: int = None,
+        num_executors: int = None,
+        archives: list() = None,
+        queue: str = None,
+        name: str = None,
         spark_conf: Dict[str, Any] = None,
     ) -> Session:
         """Create a new session in Livy.
@@ -108,6 +118,16 @@ class LivyClient:
         :param kind: The kind of session to create.
         :param proxy_user: User to impersonate when starting the session.
         :param jars: jars to be used in this session
+        :param py_files: Python files to be used in this session
+        :param files: files to be used in this session
+        :param driver_memory: Amount of memory to use for the driver process
+        :param driver_cores: Number of cores to use for the driver process
+        :param executor_memory: Amount of memory to use per executor process
+        :param executor_cores: Number of cores to use for each executor
+        :param num_executor: Number of executors to launch for this session
+        :param archives: Archives to be used in this session
+        :param queue: The name of the YARN queue to which submitted
+        :param name: The name of this session
         :param spark_conf: Spark configuration properties.
         """
         if self.legacy_server():
@@ -126,6 +146,26 @@ class LivyClient:
             body["proxyUser"] = proxy_user
         if jars is not None:
             body["jars"] = jars
+        if py_files is not None:
+            body["pyFiles"] = py_files
+        if files is not None:
+            body["files"] = files
+        if driver_memory is not None:
+            body["driverMemory"] = driver_memory
+        if driver_cores is not None:
+            body["driverCores"] = driver_cores
+        if executor_memory is not None:
+            body["executorMemory"] = executor_memory
+        if executor_cores is not None:
+            body["executorCores"] = executor_cores
+        if num_executors is not None:
+            body["numExecutors"] = num_executors
+        if archives is not None:
+            body["archives"] = archives
+        if queue is not None:
+            body["queue"] = queue
+        if name is not None:
+            body["name"] = name
         if spark_conf is not None:
             body["conf"] = spark_conf
 
