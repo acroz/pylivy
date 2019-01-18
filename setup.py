@@ -42,7 +42,6 @@ class IntegrationTests(PyTest):
 
 setup(
     name="livy",
-    version="0.4.1",
     description="A Python client for Apache Livy",
     long_description=README.read_text(),
     packages=["livy"],
@@ -56,7 +55,8 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
     ],
-    setup_requires=["wheel"],
+    use_scm_version={"version_scheme": "post-release"},
+    setup_requires=["wheel", "setuptools_scm"],
     cmdclass={"test": UnitTests, "it": IntegrationTests},
     install_requires=[
         "dataclasses; python_version<'3.7'",
