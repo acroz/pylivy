@@ -18,6 +18,8 @@ Installation
 
     $ pip install -U livy
 
+Note that ``pylivy`` requires Python 3.6 or later.
+
 Usage
 -----
 
