@@ -13,8 +13,7 @@ MOCK_SPARK_CONF = {"spark.master": "yarn", "spark.submit.deployMode": "client"}
 
 def test_list_sessions(requests_mock, mocker):
     requests_mock.get(
-        "http://example.com/sessions",
-        json={"sessions": [MOCK_SESSION_JSON]}
+        "http://example.com/sessions", json={"sessions": [MOCK_SESSION_JSON]}
     )
     mocker.patch.object(Session, "from_json")
 
@@ -28,7 +27,7 @@ def test_list_sessions(requests_mock, mocker):
 def test_get_session(requests_mock, mocker):
     requests_mock.get(
         f"http://example.com/sessions/{MOCK_SESSION_ID}",
-        json=MOCK_SESSION_JSON
+        json=MOCK_SESSION_JSON,
     )
     mocker.patch.object(Session, "from_json")
 
@@ -43,10 +42,7 @@ def test_create_session(requests_mock, mocker):
     requests_mock.get(
         "http://example.com/version", json={"version": "0.5.0-incubating"}
     )
-    requests_mock.post(
-        "http://example.com/sessions",
-        json=MOCK_SESSION_JSON
-    )
+    requests_mock.post("http://example.com/sessions", json=MOCK_SESSION_JSON)
     mocker.patch.object(Session, "from_json")
 
     client = LivyClient("http://example.com")
@@ -68,7 +64,7 @@ def test_create_session(requests_mock, mocker):
 def test_delete_session(requests_mock):
     requests_mock.delete(
         f"http://example.com/sessions/{MOCK_SESSION_ID}",
-        json={"msg": "deleted"}
+        json={"msg": "deleted"},
     )
 
     client = LivyClient("http://example.com")
@@ -80,7 +76,7 @@ def test_delete_session(requests_mock):
 def test_list_statements(requests_mock, mocker):
     requests_mock.get(
         f"http://example.com/sessions/{MOCK_SESSION_ID}/statements",
-        json={"statements": [MOCK_STATEMENT_JSON]}
+        json={"statements": [MOCK_STATEMENT_JSON]},
     )
     mocker.patch.object(Statement, "from_json")
 
@@ -95,9 +91,9 @@ def test_list_statements(requests_mock, mocker):
 
 def test_get_statement(requests_mock, mocker):
     requests_mock.get(
-        f"http://example.com/sessions/{MOCK_SESSION_ID}" +
-        f"/statements/{MOCK_STATEMENT_ID}",
-        json=MOCK_STATEMENT_JSON
+        f"http://example.com/sessions/{MOCK_SESSION_ID}"
+        + f"/statements/{MOCK_STATEMENT_ID}",
+        json=MOCK_STATEMENT_JSON,
     )
     mocker.patch.object(Statement, "from_json")
 
@@ -116,7 +112,7 @@ def test_create_statement(requests_mock, mocker):
     )
     requests_mock.post(
         f"http://example.com/sessions/{MOCK_SESSION_ID}/statements",
-        json=MOCK_STATEMENT_JSON
+        json=MOCK_STATEMENT_JSON,
     )
     mocker.patch.object(Statement, "from_json")
 
@@ -130,5 +126,6 @@ def test_create_statement(requests_mock, mocker):
         MOCK_SESSION_ID, MOCK_STATEMENT_JSON
     )
     assert requests_mock.last_request.json() == {
-        "code": MOCK_CODE, "kind": "pyspark"
+        "code": MOCK_CODE,
+        "kind": "pyspark",
     }
