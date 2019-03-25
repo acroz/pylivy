@@ -100,15 +100,15 @@ class LivyClient:
         self,
         kind: SessionKind,
         proxy_user: str = None,
-        jars: list() = None,
-        py_files: list() = None,
-        files: list() = None,
+        jars: List[str] = None,
+        py_files: List[str] = None,
+        files: List[str] = None,
         driver_memory: str = None,
         driver_cores: int = None,
         executor_memory: str = None,
         executor_cores: int = None,
         num_executors: int = None,
-        archives: list() = None,
+        archives: List[str] = None,
         queue: str = None,
         name: str = None,
         spark_conf: Dict[str, Any] = None,
@@ -124,7 +124,7 @@ class LivyClient:
         :param driver_cores: Number of cores to use for the driver process
         :param executor_memory: Amount of memory to use per executor process
         :param executor_cores: Number of cores to use for each executor
-        :param num_executor: Number of executors to launch for this session
+        :param num_executors: Number of executors to launch for this session
         :param archives: Archives to be used in this session
         :param queue: The name of the YARN queue to which submitted
         :param name: The name of this session
