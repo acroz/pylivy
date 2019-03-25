@@ -63,6 +63,6 @@ setup(
         "requests",
         "pandas",
     ],
-    tests_require=["pytest", "pytest-mock", "flask"],
+    tests_require=["pytest", "pytest-mock", "requests-mock"],
     extras_require={"docs": ["sphinx-autodoc-typehints"]},
 )
