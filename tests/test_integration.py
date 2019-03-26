@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass
 
 import pytest
@@ -10,15 +9,12 @@ from livy import (
 )
 
 
-LIVY_URL = os.environ.get('LIVY_TEST_URL', 'http://localhost:8998')
+def livy_available(livy_url):
+    return requests.get(livy_url).status_code == 200
 
 
-def livy_available():
-    return requests.get(LIVY_URL).status_code == 200
-
-
-def session_stopped(session_id):
-    response = requests.get(f'{LIVY_URL}/session/{session_id}')
+def session_stopped(livy_url, session_id):
+    response = requests.get(f'{livy_url}/session/{session_id}')
     if response.status_code == 404:
         return True
     else:
@@ -87,16 +83,17 @@ SPARKR_TEST_PARAMETERS = Parameters(
 )
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize('session_kind, params', [
     (SessionKind.SPARK, SPARK_TEST_PARAMETERS),
     (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
     (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
 ])
-def test_session(capsys, session_kind, params):
+def test_session(integration_url, capsys, session_kind, params):
 
-    assert livy_available()
+    assert livy_available(integration_url)
 
-    with LivySession(LIVY_URL, kind=session_kind) as session:
+    with LivySession(integration_url, kind=session_kind) as session:
 
         assert session.state == SessionState.IDLE
 
@@ -115,7 +112,7 @@ def test_session(capsys, session_kind, params):
         expected = pandas.DataFrame({'value': range(100)})
         assert session.read('df').equals(expected)
 
-    assert session_stopped(session.session_id)
+    assert session_stopped(integration_url, session.session_id)
 
 
 SQL_CREATE_VIEW = """
@@ -123,11 +120,12 @@ CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
 """
 
 
-def test_sql_session():
+@pytest.mark.integration
+def test_sql_session(integration_url):
 
-    assert livy_available()
+    assert livy_available(integration_url)
 
-    with LivySession(LIVY_URL, kind=SessionKind.SQL) as session:
+    with LivySession(integration_url, kind=SessionKind.SQL) as session:
 
         assert session.state == SessionState.IDLE
 
@@ -141,4 +139,4 @@ def test_sql_session():
         expected = pandas.DataFrame({'id': range(100)})
         assert session.read_sql('SELECT * FROM view').equals(expected)
 
-    assert session_stopped(session.session_id)
+    assert session_stopped(integration_url, session.session_id)
