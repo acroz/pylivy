@@ -4,9 +4,7 @@ import pytest
 import requests
 import pandas
 
-from livy import (
-    LivySession, SessionKind, SparkRuntimeError, SessionState
-)
+from livy import LivySession, SessionKind, SparkRuntimeError, SessionState
 
 
 def livy_available(livy_url):
@@ -14,11 +12,11 @@ def livy_available(livy_url):
 
 
 def session_stopped(livy_url, session_id):
-    response = requests.get(f'{livy_url}/session/{session_id}')
+    response = requests.get(f"{livy_url}/session/{session_id}")
     if response.status_code == 404:
         return True
     else:
-        return response.get_json()['state'] == 'shutting_down'
+        return response.get_json()["state"] == "shutting_down"
 
 
 @dataclass
@@ -44,11 +42,11 @@ val df = spark.createDataFrame(rdd.map { i => Row(i) }, schema)
 
 SPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='println("foo")',
-    print_foo_output='foo\n\n',
+    print_foo_output="foo\n\n",
     create_dataframe_code=SPARK_CREATE_DF,
-    dataframe_count_code='df.count()',
-    dataframe_count_output='res1: Long = 100\n\n',
-    error_code='1 / 0'
+    dataframe_count_code="df.count()",
+    dataframe_count_output="res1: Long = 100\n\n",
+    error_code="1 / 0",
 )
 
 
@@ -60,11 +58,11 @@ df = spark.createDataFrame([Row(value=i) for i in range(100)])
 
 PYSPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
-    print_foo_output='foo\n',
+    print_foo_output="foo\n",
     create_dataframe_code=PYSPARK_CREATE_DF,
-    dataframe_count_code='df.count()',
-    dataframe_count_output='100\n',
-    error_code='1 / 0'
+    dataframe_count_code="df.count()",
+    dataframe_count_output="100\n",
+    error_code="1 / 0",
 )
 
 
@@ -77,18 +75,21 @@ SPARKR_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
     print_foo_output='[1] "foo"\n',
     create_dataframe_code=SPARKR_CREATE_DF,
-    dataframe_count_code='count(df)',
-    dataframe_count_output='[1] 100\n',
-    error_code='missing_function()'
+    dataframe_count_code="count(df)",
+    dataframe_count_output="[1] 100\n",
+    error_code="missing_function()",
 )
 
 
 @pytest.mark.integration
-@pytest.mark.parametrize('session_kind, params', [
-    (SessionKind.SPARK, SPARK_TEST_PARAMETERS),
-    (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
-    (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS)
-])
+@pytest.mark.parametrize(
+    "session_kind, params",
+    [
+        (SessionKind.SPARK, SPARK_TEST_PARAMETERS),
+        (SessionKind.PYSPARK, PYSPARK_TEST_PARAMETERS),
+        (SessionKind.SPARKR, SPARKR_TEST_PARAMETERS),
+    ],
+)
 def test_session(integration_url, capsys, session_kind, params):
 
     assert livy_available(integration_url)
@@ -98,19 +99,19 @@ def test_session(integration_url, capsys, session_kind, params):
         assert session.state == SessionState.IDLE
 
         session.run(params.print_foo_code)
-        assert capsys.readouterr() == (params.print_foo_output, '')
+        assert capsys.readouterr() == (params.print_foo_output, "")
 
         session.run(params.create_dataframe_code)
         capsys.readouterr()
 
         session.run(params.dataframe_count_code)
-        assert capsys.readouterr() == (params.dataframe_count_output, '')
+        assert capsys.readouterr() == (params.dataframe_count_output, "")
 
         with pytest.raises(SparkRuntimeError):
             session.run(params.error_code)
 
-        expected = pandas.DataFrame({'value': range(100)})
-        assert session.read('df').equals(expected)
+        expected = pandas.DataFrame({"value": range(100)})
+        assert session.read("df").equals(expected)
 
     assert session_stopped(integration_url, session.session_id)
 
@@ -130,13 +131,13 @@ def test_sql_session(integration_url):
         assert session.state == SessionState.IDLE
 
         session.run(SQL_CREATE_VIEW)
-        output = session.run('SELECT COUNT(*) FROM view')
-        assert output.json['data'] == [[100]]
+        output = session.run("SELECT COUNT(*) FROM view")
+        assert output.json["data"] == [[100]]
 
         with pytest.raises(SparkRuntimeError):
-            session.run('not valid SQL!')
+            session.run("not valid SQL!")
 
-        expected = pandas.DataFrame({'id': range(100)})
-        assert session.read_sql('SELECT * FROM view').equals(expected)
+        expected = pandas.DataFrame({"id": range(100)})
+        assert session.read_sql("SELECT * FROM view").equals(expected)
 
     assert session_stopped(integration_url, session.session_id)
