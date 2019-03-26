@@ -1,18 +1,37 @@
 language: python
+cache: pip
 dist: xenial
-python:
-  - "3.6"
-  - "3.7"
-services:
-  - docker
-before_install:
-  - docker pull acroz/livy
-  - docker run --publish 8998:8998 acroz/livy &
-  - sleep 10
+
+matrix:
+  include:
+    - name: flake8
+      python: 3.7
+      env: TOXENV=flake8
+    - name: mypy
+      python: 3.7
+      env: TOXENV=mypy
+    - name: black
+      python: 3.7
+      env: TOXENV=black
+    - python: 3.6
+      env: TOXENV=py36-integration
+      services:
+        - docker
+      before_install:
+        - docker pull acroz/livy
+        - docker run --publish 8998:8998 acroz/livy &
+        - sleep 10
+    - python: 3.7
+      env: TOXENV=py37-integration
+      services:
+        - docker
+      before_install:
+        - docker pull acroz/livy
+        - docker run --publish 8998:8998 acroz/livy &
+        - sleep 10
+
+install:
+  - pip install tox
+
 script:
-  - pip install flake8 mypy black .
-  - flake8
-  - mypy . --ignore-missing-imports
-  - black livy tests docs setup.py --check
-  - python setup.py test
-  - python setup.py it
+  - tox
