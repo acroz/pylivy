@@ -12,9 +12,9 @@ MOCK_SPARK_CONF = {"spark.master": "yarn", "spark.submit.deployMode": "client"}
 MOCK_JARS = ["mock1.jar", "mock2.jar"]
 MOCK_PY_FILES = ["mock1.py", "mock2.py"]
 MOCK_FILES = ["mockfile1.txt", "mockfile2.txt"]
-MOCK_DRIVER_MEMORY = ""
+MOCK_DRIVER_MEMORY = "512m"
 MOCK_DRIVER_CORES = 2
-MOCK_EXECUTOR_MEMORY = ""
+MOCK_EXECUTOR_MEMORY = "1024m"
 MOCK_EXECUTOR_CORES = 4
 MOCK_NUM_EXECUTORS = 6
 MOCK_ARCHIVES = ["mock1.tar.gz", "mock2.tar.gz"]
@@ -71,7 +71,7 @@ def test_create_session(requests_mock, mocker):
         num_executors=MOCK_NUM_EXECUTORS,
         archives=MOCK_ARCHIVES,
         queue=MOCK_QUEUE,
-        name=MOCK_NAME
+        name=MOCK_NAME,
     )
 
     assert session == Session.from_json.return_value
@@ -90,7 +90,7 @@ def test_create_session(requests_mock, mocker):
         "numExecutors": MOCK_NUM_EXECUTORS,
         "archives": MOCK_ARCHIVES,
         "queue": MOCK_QUEUE,
-        "name": MOCK_NAME
+        "name": MOCK_NAME,
     }
 
 
