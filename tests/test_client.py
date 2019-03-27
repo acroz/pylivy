@@ -9,6 +9,17 @@ MOCK_STATEMENT_ID = 12
 MOCK_CODE = "mock code"
 MOCK_PROXY_USER = "proxy-user"
 MOCK_SPARK_CONF = {"spark.master": "yarn", "spark.submit.deployMode": "client"}
+MOCK_JARS = ["mock1.jar", "mock2.jar"]
+MOCK_PY_FILES = ["mock1.py", "mock2.py"]
+MOCK_FILES = ["mockfile1.txt", "mockfile2.txt"]
+MOCK_DRIVER_MEMORY = ""
+MOCK_DRIVER_CORES = 2
+MOCK_EXECUTOR_MEMORY = ""
+MOCK_EXECUTOR_CORES = 4
+MOCK_NUM_EXECUTORS = 6
+MOCK_ARCHIVES = ["mock1.tar.gz", "mock2.tar.gz"]
+MOCK_QUEUE = "mock-queue"
+MOCK_NAME = "mock-session-name"
 
 
 def test_list_sessions(requests_mock, mocker):
@@ -50,6 +61,17 @@ def test_create_session(requests_mock, mocker):
         SessionKind.PYSPARK,
         proxy_user=MOCK_PROXY_USER,
         spark_conf=MOCK_SPARK_CONF,
+        jars=MOCK_JARS,
+        py_files=MOCK_PY_FILES,
+        files=MOCK_FILES,
+        driver_memory=MOCK_DRIVER_MEMORY,
+        driver_cores=MOCK_DRIVER_CORES,
+        executor_memory=MOCK_EXECUTOR_MEMORY,
+        executor_cores=MOCK_EXECUTOR_CORES,
+        num_executors=MOCK_NUM_EXECUTORS,
+        archives=MOCK_ARCHIVES,
+        queue=MOCK_QUEUE,
+        name=MOCK_NAME
     )
 
     assert session == Session.from_json.return_value
@@ -58,6 +80,17 @@ def test_create_session(requests_mock, mocker):
         "kind": "pyspark",
         "proxyUser": MOCK_PROXY_USER,
         "conf": MOCK_SPARK_CONF,
+        "jars": MOCK_JARS,
+        "pyFiles": MOCK_PY_FILES,
+        "files": MOCK_FILES,
+        "driverMemory": MOCK_DRIVER_MEMORY,
+        "driverCores": MOCK_DRIVER_CORES,
+        "executorMemory": MOCK_EXECUTOR_MEMORY,
+        "executorCores": MOCK_EXECUTOR_CORES,
+        "numExecutors": MOCK_NUM_EXECUTORS,
+        "archives": MOCK_ARCHIVES,
+        "queue": MOCK_QUEUE,
+        "name": MOCK_NAME
     }
 
 
