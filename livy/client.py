@@ -116,7 +116,7 @@ class LivyClient:
         """Create a new session in Livy.
 
         The py_files, files, jars and archives arguments are lists of URLs,
-        eg: ['s3://bucket/object', 'hdfs://path/to/file', ...] and must be
+        e.g. ["s3://bucket/object", "hdfs://path/to/file", ...] and must be
         reachable by the Spark driver process.  If the provided URL has no
         scheme, it's considered to be relative to the default file system
         configured in the Livy server.
@@ -141,10 +141,10 @@ class LivyClient:
         :param py_files: URLs of Python files to be used in this session.
         :param files: URLs of files to be used in this session.
         :param driver_memory: Amount of memory to use for the driver process
-            (eg: '512m').
+            (e.g. '512m').
         :param driver_cores: Number of cores to use for the driver process.
         :param executor_memory: Amount of memory to use per executor process
-            (eg: '512m').
+            (e.g. '512m').
         :param executor_cores: Number of cores to use for each executor.
         :param num_executors: Number of executors to launch for this session.
         :param archives: URLs of archives to be used in this session.
