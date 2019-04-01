@@ -1,6 +1,6 @@
 import time
 import json
-from typing import Any, Dict, Iterable, Iterator, Optional
+from typing import Any, Dict, List, Iterable, Iterator, Optional
 
 import pandas
 
@@ -72,9 +72,42 @@ def polling_intervals(
 class LivySession:
     """Manages a remote Livy session and high-level interactions with it.
 
+    The py_files, files, jars and archives arguments are lists of URLs, e.g.
+    ["s3://bucket/object", "hdfs://path/to/file", ...] and must be reachable by
+    the Spark driver process.  If the provided URL has no scheme, it's
+    considered to be relative to the default file system configured in the Livy
+    server.
+
+    URLs in the py_files argument are copied to a temporary staging area and
+    inserted into Python's sys.path ahead of the standard library paths. This
+    allows you to import .py, .zip and .egg files in Python.
+
+    URLs for jars, py_files, files and archives arguments are all copied to the
+    same working directory on the Spark cluster.
+
+    The driver_memory and executor_memory arguments have the same format as JVM
+    memory strings with a size unit suffix ("k", "m", "g" or "t") (e.g. 512m,
+    2g).
+
+    See https://spark.apache.org/docs/latest/configuration.html for more
+    information on Spark configuration properties.
+
     :param url: The URL of the Livy server.
     :param kind: The kind of session to create.
     :param proxy_user: User to impersonate when starting the session.
+    :param jars: URLs of jars to be used in this session.
+    :param py_files: URLs of Python files to be used in this session.
+    :param files: URLs of files to be used in this session.
+    :param driver_memory: Amount of memory to use for the driver process (e.g.
+        '512m').
+    :param driver_cores: Number of cores to use for the driver process.
+    :param executor_memory: Amount of memory to use per executor process (e.g.
+        '512m').
+    :param executor_cores: Number of cores to use for each executor.
+    :param num_executors: Number of executors to launch for this session.
+    :param archives: URLs of archives to be used in this session.
+    :param queue: The name of the YARN queue to which submitted.
+    :param name: The name of this session.
     :param spark_conf: Spark configuration properties.
     :param echo: Whether to echo output printed in the remote session. Defaults
         to ``True``.
@@ -88,6 +121,17 @@ class LivySession:
         auth: Auth = None,
         kind: SessionKind = SessionKind.PYSPARK,
         proxy_user: str = None,
+        jars: List[str] = None,
+        py_files: List[str] = None,
+        files: List[str] = None,
+        driver_memory: str = None,
+        driver_cores: int = None,
+        executor_memory: str = None,
+        executor_cores: int = None,
+        num_executors: int = None,
+        archives: List[str] = None,
+        queue: str = None,
+        name: str = None,
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
@@ -95,6 +139,17 @@ class LivySession:
         self.client = LivyClient(url, auth)
         self.kind = kind
         self.proxy_user = proxy_user
+        self.jars = jars
+        self.py_files = py_files
+        self.files = files
+        self.driver_memory = driver_memory
+        self.driver_cores = driver_cores
+        self.executor_memory = executor_memory
+        self.executor_cores = executor_cores
+        self.num_executors = num_executors
+        self.archives = archives
+        self.queue = queue
+        self.name = name
         self.spark_conf = spark_conf
         self.echo = echo
         self.check = check
@@ -111,7 +166,20 @@ class LivySession:
         """Create the remote Spark session and wait for it to be ready."""
 
         session = self.client.create_session(
-            self.kind, self.proxy_user, self.spark_conf
+            self.kind,
+            self.proxy_user,
+            self.jars,
+            self.py_files,
+            self.files,
+            self.driver_memory,
+            self.driver_cores,
+            self.executor_memory,
+            self.executor_cores,
+            self.num_executors,
+            self.archives,
+            self.queue,
+            self.name,
+            self.spark_conf,
         )
         self.session_id = session.session_id
 
