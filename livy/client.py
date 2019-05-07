@@ -40,7 +40,7 @@ class JsonClient:
     ) -> None:
         self.url = url
         self.session = requests.Session()
-        self.session.verify_ssl = verify
+        self.session.verify = verify
         if auth is not None:
             self.session.auth = auth
 
@@ -65,7 +65,7 @@ class JsonClient:
             auth=self.session.auth,
             headers=self.session.headers,
             params=self.session.params,
-            verify=self.session.verify_ssl,
+            verify=self.session.verify,
         )
         response.raise_for_status()
         return response.json()

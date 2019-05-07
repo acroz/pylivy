@@ -113,7 +113,8 @@ class LivySession:
         to ``True``.
     :param check: Whether to raise an exception when a statement in the remote
         session fails. Defaults to ``True``.
-    :param verify_ssl: This option is used when SSL authentication is used, and the existence of the certificate
+    :param verify_ssl: This option is used when SSL authentication is used,
+        and the existence of the certificate
         must be verified or certified with some certification authority.
         Defaults to ``False``.
     """
