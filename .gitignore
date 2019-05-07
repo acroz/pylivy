@@ -5,4 +5,3 @@ dist/
 livy.egg-info/
 .pytest_cache/
 .tox/
-.idea

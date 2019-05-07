@@ -35,10 +35,12 @@ class JsonClient:
     HTTP code is received.
     """
 
-    def __init__(self, url: str, auth: Auth = None) -> None:
+    def __init__(
+        self, url: str, auth: Auth = None, verify: bool = False
+    ) -> None:
         self.url = url
         self.session = requests.Session()
-        self.session.verify = False
+        self.session.verify_ssl = verify
         if auth is not None:
             self.session.auth = auth
 
@@ -56,12 +58,15 @@ class JsonClient:
 
     def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
         url = self.url.rstrip("/") + endpoint
-        response = self.session.request(method, url,
-                                        json=data,
-                                        auth=self.session.auth,
-                                        headers=self.session.headers,
-                                        params=self.session.params,
-                                        verify=self.session.verify)
+        response = self.session.request(
+            method,
+            url,
+            json=data,
+            auth=self.session.auth,
+            headers=self.session.headers,
+            params=self.session.params,
+            verify=self.session.verify_ssl,
+        )
         response.raise_for_status()
         return response.json()
 
@@ -71,10 +76,15 @@ class LivyClient:
 
     :param url: The URL of the Livy server.
     :param auth: A requests-compatible auth object to use when making requests.
+    :param verify_ssl: This option is used when SSL authentication is used, and the existence of the certificate
+        must be verified or certified with some certification authority.
+        Defaults to ``False``.
     """
 
-    def __init__(self, url: str, auth: Auth = None) -> None:
-        self._client = JsonClient(url, auth)
+    def __init__(
+        self, url: str, auth: Auth = None, verify_ssl: bool = False
+    ) -> None:
+        self._client = JsonClient(url, auth, verify_ssl)
         self._server_version_cache: Optional[Version] = None
 
     def close(self) -> None:
