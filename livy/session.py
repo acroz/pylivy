@@ -135,6 +135,7 @@ class LivySession:
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
+        verify: bool = False
     ) -> None:
         self.client = LivyClient(url, auth)
         self.kind = kind
@@ -153,6 +154,7 @@ class LivySession:
         self.spark_conf = spark_conf
         self.echo = echo
         self.check = check
+        self.verify = verify
         self.session_id: Optional[int] = None
 
     def __enter__(self) -> "LivySession":
