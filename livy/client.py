@@ -36,7 +36,7 @@ class JsonClient:
     """
 
     def __init__(
-        self, url: str, auth: Auth = None, verify: bool = False
+        self, url: str, auth: Auth = None, verify: bool = True
     ) -> None:
         self.url = url
         self.session = requests.Session()
@@ -83,7 +83,7 @@ class LivyClient:
     """
 
     def __init__(
-        self, url: str, auth: Auth = None, verify_ssl: bool = False
+        self, url: str, auth: Auth = None, verify_ssl: bool = True
     ) -> None:
         self._client = JsonClient(url, auth, verify_ssl)
         self._server_version_cache: Optional[Version] = None

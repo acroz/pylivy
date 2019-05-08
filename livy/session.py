@@ -116,7 +116,7 @@ class LivySession:
     :param verify_ssl: This option is used when SSL authentication is used,
         and the existence of the certificate
         must be verified or certified with some certification authority.
-        Defaults to ``False``.
+        Defaults to ``True``.
     """
 
     def __init__(
@@ -139,9 +139,9 @@ class LivySession:
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
-        verify_ssl: bool = False,
+        verify_ssl: bool = True,
     ) -> None:
-        self.client = LivyClient(url, auth)
+        self.client = LivyClient(url, auth, verify_ssl = verify_ssl)
         self.kind = kind
         self.proxy_user = proxy_user
         self.jars = jars
