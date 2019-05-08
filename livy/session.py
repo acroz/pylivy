@@ -141,7 +141,7 @@ class LivySession:
         check: bool = True,
         verify_ssl: bool = True,
     ) -> None:
-        self.client = LivyClient(url, auth, verify_ssl = verify_ssl)
+        self.client = LivyClient(url, auth, verify_ssl=verify_ssl)
         self.kind = kind
         self.proxy_user = proxy_user
         self.jars = jars
