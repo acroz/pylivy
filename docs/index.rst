@@ -48,7 +48,7 @@ Authenticate requests sent to Livy by passing `any requests Auth object
         session.run("filtered = df.filter(df.name == 'Bob')")
         local_df = session.read('filtered')
 
-API Documenation
+API Documentation
 ----------------
 
 .. toctree::
