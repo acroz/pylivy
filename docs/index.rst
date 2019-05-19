@@ -49,7 +49,7 @@ Authenticate requests sent to Livy by passing `any requests Auth object
         local_df = session.read('filtered')
 
 API Documentation
-----------------
+-----------------
 
 .. toctree::
     :maxdepth: 2
