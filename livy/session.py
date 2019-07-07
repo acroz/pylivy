@@ -1,12 +1,12 @@
 import time
 import json
-from typing import Any, Dict, List, Iterable, Iterator, Optional
+from typing import Any, Dict, List, Optional
 
 import pandas
 
 from livy.client import LivyClient, Auth
 from livy.models import SessionKind, SessionState, StatementState, Output
-
+from livy.utils import polling_intervals
 
 SERIALISE_DATAFRAME_TEMPLATE_SPARK = "{}.toJSON.collect.foreach(println)"
 SERIALISE_DATAFRAME_TEMPLATE_PYSPARK = """
@@ -51,22 +51,6 @@ def dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     except KeyError:
         raise ValueError("json output does not match expected structure")
     return pandas.DataFrame(data, columns=columns)
-
-
-def polling_intervals(
-    start: Iterable[float], rest: float, max_duration: float = None
-) -> Iterator[float]:
-    def _intervals():
-        yield from start
-        while True:
-            yield rest
-
-    cumulative = 0.0
-    for interval in _intervals():
-        cumulative += interval
-        if max_duration is not None and cumulative > max_duration:
-            break
-        yield interval
 
 
 class LivySession:
