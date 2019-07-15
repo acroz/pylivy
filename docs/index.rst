@@ -56,3 +56,11 @@ API Documentation
 
     api/session
     api/client
+
+Contributing
+------------
+
+.. toctree::
+    :maxdepth: 2
+
+    contributing
