@@ -3,7 +3,7 @@ from typing import Any, Union, Dict, List, Tuple, Optional
 
 import requests
 
-from livy.models import Version, Session, SessionKind, Statement, StatementKind, Batch
+from livy.models import Version, Session, SessionKind, Statement, StatementKind, Batch, BatchLog
 
 Auth = Union[requests.auth.AuthBase, Tuple[str, str]]
 
@@ -43,7 +43,7 @@ class JsonClient:
     def close(self) -> None:
         self.session.close()
 
-    def get(self, endpoint: str = "") -> dict:
+    def get(self, endpoint: str = "", params: dict = None) -> dict:
         return self._request("GET", endpoint)
 
     def post(self, endpoint: str, data: dict = None) -> dict:
@@ -52,9 +52,9 @@ class JsonClient:
     def delete(self, endpoint: str = "") -> dict:
         return self._request("DELETE", endpoint)
 
-    def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
+    def _request(self, method: str, endpoint: str, data: dict = None, params: dict = None) -> dict:
         url = self.url.rstrip("/") + endpoint
-        response = self.session.request(method, url, json=data)
+        response = self.session.request(method, url, json=data, params=params)
         response.raise_for_status()
         return response.json()
 
@@ -301,6 +301,7 @@ class LivyClient:
 
         :param file: File containing the application to execute.
         :param class_name: Application Java/Spark main class.
+        :param args: An array of strings to be passed to the Spark app.
         :param proxy_user: User to impersonate when starting the session.
         :param jars: URLs of jars to be used in this session.
         :param py_files: URLs of Python files to be used in this session.
@@ -373,6 +374,22 @@ class LivyClient:
             else:
                 raise
         return Batch.from_json(data)
+
+    def get_batch_log(self, batch_id: int, offset: int = 0, limit: int = 100) -> Optional[BatchLog]:
+        """Get batch log so far.
+
+        :param batch_id: The ID of the batch.
+        :param offset: Line amount to skip
+        :param limit: Line amount to retrieve
+        """
+        try:
+            data = self._client.get(f"/batches/{batch_id}/log", params={"from": offset, "size": limit})
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            else:
+                raise
+        return BatchLog.from_json(data)
 
     def list_batches(self) -> List[Batch]:
         """Get all known batches (old ones may not be returned).

@@ -97,16 +97,8 @@ class LivyBatch:
         self.check = check
         self.batch_id: Optional[int] = None
 
-    def __enter__(self) -> "LivyBatch":
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self.kill()
-
     def start(self) -> None:
-        """Create the remote Spark session and wait for it to be ready."""
-
+        """Create the remote Spark session (don't wait it to be ready)."""
         batch = self.client.create_batch(
             self.file,
             self.class_name,
@@ -127,11 +119,20 @@ class LivyBatch:
         )
         self.batch_id = batch.batch_id
 
-        not_ready = {BatchState.NOT_STARTED, BatchState.STARTING}
-        intervals = polling_intervals([0.1, 0.5], 1.0)
+    def wait(self) -> BatchState:
+        in_progress = {
+            BatchState.NOT_STARTED, BatchState.STARTING, BatchState.RECOVERING,
+            BatchState.RUNNING, BatchState.BUSY, BatchState.SHUTTING_DOWN
+        }
+        intervals = polling_intervals([0.1, 0.5, 1.0, 3.0], 5.0)
 
-        while self.state in not_ready:
+        while True:
+            state = self.state
+            if state not in in_progress:
+                break
             time.sleep(next(intervals))
+
+        return state
 
     @property
     def state(self) -> BatchState:
@@ -142,6 +143,15 @@ class LivyBatch:
         if batch is None:
             raise ValueError("batch session not found - it may have been shut down")
         return batch.state
+
+    def log(self, offset: int = 0, limit: int = 100) -> List[str]:
+        """Get logs"""
+        if self.batch_id is None:
+            raise ValueError("batch session not yet started")
+        log = self.client.get_batch_log(self.batch_id, offset=offset, limit=limit)
+        if log is None:
+            raise ValueError("batch session not found - it may have been shut down")
+        return log.lines
 
     def kill(self) -> None:
         """Kill the managed Spark batch session."""
