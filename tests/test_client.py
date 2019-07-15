@@ -1,7 +1,7 @@
 import pytest
 
 from livy.client import LivyClient
-from livy.models import Session, SessionKind, Statement, StatementKind
+from livy.models import Session, SessionKind, Statement, StatementKind, Batch, BatchLog
 
 
 MOCK_SESSION_JSON = {"mock": "session"}
@@ -22,6 +22,12 @@ MOCK_NUM_EXECUTORS = 6
 MOCK_ARCHIVES = ["mock1.tar.gz", "mock2.tar.gz"]
 MOCK_QUEUE = "mock-queue"
 MOCK_NAME = "mock-session-name"
+MOCK_BATCH_JSON = {"mock": "batch"}
+MOCK_BATCH_FILE = "/opt/app/app.jar"
+MOCK_BATCH_CLASSNAME = "com.example.application"
+MOCK_BATCH_ARGS = ["--arg1=1", "--arg2=2"]
+MOCK_BATCH_ID = 2398
+MOCK_BATCH_LOG_JSON = {"mock": "batch_log"}
 
 
 @pytest.mark.parametrize("verify", [True, False, "my/ca/bundle"])
@@ -176,3 +182,80 @@ def test_create_statement(requests_mock, mocker):
         "code": MOCK_CODE,
         "kind": "pyspark",
     }
+
+
+def test_create_batch(requests_mock, mocker):
+    requests_mock.get(
+        "http://example.com/version", json={"version": "0.5.0-incubating"}
+    )
+    requests_mock.post("http://example.com/batches", json=MOCK_BATCH_JSON)
+    mocker.patch.object(Batch, "from_json")
+
+    client = LivyClient("http://example.com")
+    batch = client.create_batch(
+        file=MOCK_BATCH_FILE,
+        class_name=MOCK_BATCH_CLASSNAME,
+        args=MOCK_BATCH_ARGS,
+        proxy_user=MOCK_PROXY_USER,
+        jars=MOCK_JARS,
+        py_files=MOCK_PY_FILES,
+        files=MOCK_FILES,
+        driver_memory=MOCK_DRIVER_MEMORY,
+        driver_cores=MOCK_DRIVER_CORES,
+        executor_memory=MOCK_EXECUTOR_MEMORY,
+        executor_cores=MOCK_EXECUTOR_CORES,
+        num_executors=MOCK_NUM_EXECUTORS,
+        archives=MOCK_ARCHIVES,
+        queue=MOCK_QUEUE,
+        name=MOCK_NAME,
+        spark_conf=MOCK_SPARK_CONF,
+    )
+
+    assert batch == Batch.from_json.return_value
+    Batch.from_json.assert_called_once_with(MOCK_BATCH_JSON)
+    assert requests_mock.last_request.json() == {
+        "file": MOCK_BATCH_FILE,
+        "proxyUser": MOCK_PROXY_USER,
+        "className": MOCK_BATCH_CLASSNAME,
+        "args": MOCK_BATCH_ARGS,
+        "jars": MOCK_JARS,
+        "pyFiles": MOCK_PY_FILES,
+        "files": MOCK_FILES,
+        "driverMemory": MOCK_DRIVER_MEMORY,
+        "driverCores": MOCK_DRIVER_CORES,
+        "executorMemory": MOCK_EXECUTOR_MEMORY,
+        "executorCores": MOCK_EXECUTOR_CORES,
+        "numExecutors": MOCK_NUM_EXECUTORS,
+        "archives": MOCK_ARCHIVES,
+        "queue": MOCK_QUEUE,
+        "name": MOCK_NAME,
+        "conf": MOCK_SPARK_CONF,
+    }
+
+
+def test_get_batch(requests_mock, mocker):
+    requests_mock.get(
+        f"http://example.com/batches/{MOCK_BATCH_ID}",
+        json=MOCK_BATCH_JSON,
+    )
+    mocker.patch.object(Batch, "from_json")
+
+    client = LivyClient("http://example.com")
+    batch = client.get_batch(MOCK_BATCH_ID)
+
+    assert batch == Batch.from_json.return_value
+    Batch.from_json.assert_called_once_with(MOCK_BATCH_JSON)
+
+
+def test_get_batch_log(requests_mock, mocker):
+    requests_mock.get(
+        f"http://example.com/batches/{MOCK_BATCH_ID}/log",
+        json=MOCK_BATCH_LOG_JSON,
+    )
+    mocker.patch.object(BatchLog, "from_json")
+
+    client = LivyClient("http://example.com")
+    batch = client.get_batch_log(MOCK_BATCH_ID)
+
+    assert batch == BatchLog.from_json.return_value
+    BatchLog.from_json.assert_called_once_with(MOCK_BATCH_LOG_JSON)

@@ -193,3 +193,20 @@ class Batch:
             data["log"],
             BatchState(data["state"]),
         )
+
+
+@dataclass
+class BatchLog:
+    batch_id: int
+    offset: int
+    size: int
+    lines: Optional[List[str]]
+
+    @classmethod
+    def from_json(cls, data: dict) -> "BatchLog":
+        return cls(
+            data["id"],
+            data["from"],
+            data["size"],
+            data["log"]
+        )
