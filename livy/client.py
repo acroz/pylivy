@@ -36,13 +36,13 @@ class JsonClient:
     """
 
     def __init__(
-        self, url: str, auth: Auth = None, verify: bool = True
+        self, url: str, auth: Auth = None, verify_ssl: bool = True
     ) -> None:
         self.url = url
         self.session = requests.Session()
-        self.session.verify = verify
         if auth is not None:
             self.session.auth = auth
+        self.session.verify = verify_ssl
 
     def close(self) -> None:
         self.session.close()
