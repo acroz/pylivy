@@ -1,3 +1,5 @@
+import pytest
+
 from livy.client import LivyClient
 from livy.models import Session, SessionKind, Statement, StatementKind
 
@@ -20,6 +22,18 @@ MOCK_NUM_EXECUTORS = 6
 MOCK_ARCHIVES = ["mock1.tar.gz", "mock2.tar.gz"]
 MOCK_QUEUE = "mock-queue"
 MOCK_NAME = "mock-session-name"
+
+
+@pytest.mark.parametrize("verify", [True, False, "my/ca/bundle"])
+def test_verify(requests_mock, mocker, verify):
+    requests_mock.get("http://example.com/sessions", json={"sessions": []})
+    mocker.patch.object(Session, "from_json")
+
+    client = LivyClient("http://example.com", verify=verify)
+    client.list_sessions()
+
+    [request] = requests_mock.request_history
+    assert request.verify is verify
 
 
 def test_list_sessions(requests_mock, mocker):

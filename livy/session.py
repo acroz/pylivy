@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Iterable, Iterator, Optional
 
 import pandas
 
-from livy.client import LivyClient, Auth
+from livy.client import LivyClient, Auth, Verify
 from livy.models import SessionKind, SessionState, StatementState, Output
 
 
@@ -93,6 +93,10 @@ class LivySession:
     information on Spark configuration properties.
 
     :param url: The URL of the Livy server.
+    :param auth: A requests-compatible auth object to use when making requests.
+    :param verify: Either a boolean, in which case it controls whether we
+        verify the server’s TLS certificate, or a string, in which case it must
+        be a path to a CA bundle to use. Defaults to ``True``.
     :param kind: The kind of session to create.
     :param proxy_user: User to impersonate when starting the session.
     :param jars: URLs of jars to be used in this session.
@@ -119,6 +123,7 @@ class LivySession:
         self,
         url: str,
         auth: Auth = None,
+        verify: Verify = True,
         kind: SessionKind = SessionKind.PYSPARK,
         proxy_user: str = None,
         jars: List[str] = None,
@@ -136,7 +141,7 @@ class LivySession:
         echo: bool = True,
         check: bool = True,
     ) -> None:
-        self.client = LivyClient(url, auth)
+        self.client = LivyClient(url, auth, verify=verify)
         self.kind = kind
         self.proxy_user = proxy_user
         self.jars = jars
