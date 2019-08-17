@@ -93,6 +93,9 @@ class LivySession:
     information on Spark configuration properties.
 
     :param url: The URL of the Livy server.
+    :param verify: Either a boolean, in which case it controls whether we
+        verify the server’s TLS certificate, or a string, in which case it must
+        be a path to a CA bundle to use. Defaults to ``True``.
     :param kind: The kind of session to create.
     :param proxy_user: User to impersonate when starting the session.
     :param jars: URLs of jars to be used in this session.
@@ -113,15 +116,13 @@ class LivySession:
         to ``True``.
     :param check: Whether to raise an exception when a statement in the remote
         session fails. Defaults to ``True``.
-    :param verify: Either a boolean, in which case it controls whether we
-        verify the server’s TLS certificate, or a string, in which case it must
-        be a path to a CA bundle to use. Defaults to ``True``.
     """
 
     def __init__(
         self,
         url: str,
         auth: Auth = None,
+        verify: Verify = True,
         kind: SessionKind = SessionKind.PYSPARK,
         proxy_user: str = None,
         jars: List[str] = None,
@@ -138,7 +139,6 @@ class LivySession:
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
-        verify: Verify = True,
     ) -> None:
         self.client = LivyClient(url, auth, verify=verify)
         self.kind = kind
