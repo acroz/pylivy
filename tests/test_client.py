@@ -24,7 +24,7 @@ MOCK_QUEUE = "mock-queue"
 MOCK_NAME = "mock-session-name"
 
 
-@pytest.mark.parametrize("verify", [True, False])
+@pytest.mark.parametrize("verify", [True, False, "my/ca/bundle"])
 def test_verify(requests_mock, mocker, verify):
     requests_mock.get(
         "http://example.com/sessions", json={"sessions": []}
