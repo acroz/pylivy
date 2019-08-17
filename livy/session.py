@@ -93,6 +93,7 @@ class LivySession:
     information on Spark configuration properties.
 
     :param url: The URL of the Livy server.
+    :param auth: A requests-compatible auth object to use when making requests.
     :param verify: Either a boolean, in which case it controls whether we
         verify the server’s TLS certificate, or a string, in which case it must
         be a path to a CA bundle to use. Defaults to ``True``.
