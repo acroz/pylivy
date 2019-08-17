@@ -58,15 +58,7 @@ class JsonClient:
 
     def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
         url = self.url.rstrip("/") + endpoint
-        response = self.session.request(
-            method,
-            url,
-            json=data,
-            auth=self.session.auth,
-            headers=self.session.headers,
-            params=self.session.params,
-            verify=self.session.verify,
-        )
+        response = self.session.request(method, url, json=data)
         response.raise_for_status()
         return response.json()
 
