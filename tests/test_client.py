@@ -26,9 +26,7 @@ MOCK_NAME = "mock-session-name"
 
 @pytest.mark.parametrize("verify", [True, False, "my/ca/bundle"])
 def test_verify(requests_mock, mocker, verify):
-    requests_mock.get(
-        "http://example.com/sessions", json={"sessions": []}
-    )
+    requests_mock.get("http://example.com/sessions", json={"sessions": []})
     mocker.patch.object(Session, "from_json")
 
     client = LivyClient("http://example.com", verify=verify)
