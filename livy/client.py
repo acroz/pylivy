@@ -36,13 +36,13 @@ class JsonClient:
     """
 
     def __init__(
-        self, url: str, auth: Auth = None, verify_ssl: bool = True
+        self, url: str, auth: Auth = None, verify: bool = True
     ) -> None:
         self.url = url
         self.session = requests.Session()
         if auth is not None:
             self.session.auth = auth
-        self.session.verify = verify_ssl
+        self.session.verify = verify
 
     def close(self) -> None:
         self.session.close()
@@ -68,14 +68,14 @@ class LivyClient:
 
     :param url: The URL of the Livy server.
     :param auth: A requests-compatible auth object to use when making requests.
-    :param verify_ssl: Whether to verify the server's TLS certificate. Defaults
-        to ``True``.
+    :param verify: Whether to verify the server's TLS certificate. Defaults to
+        ``True``.
     """
 
     def __init__(
-        self, url: str, auth: Auth = None, verify_ssl: bool = True
+        self, url: str, auth: Auth = None, verify: bool = True
     ) -> None:
-        self._client = JsonClient(url, auth, verify_ssl)
+        self._client = JsonClient(url, auth, verify)
         self._server_version_cache: Optional[Version] = None
 
     def close(self) -> None:

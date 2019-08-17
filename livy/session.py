@@ -113,7 +113,7 @@ class LivySession:
         to ``True``.
     :param check: Whether to raise an exception when a statement in the remote
         session fails. Defaults to ``True``.
-    :param verify_ssl: This option is used when SSL authentication is used,
+    :param verify: This option is used when SSL authentication is used,
         and the existence of the certificate
         must be verified or certified with some certification authority.
         Defaults to ``True``.
@@ -139,9 +139,9 @@ class LivySession:
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
-        verify_ssl: bool = True,
+        verify: bool = True,
     ) -> None:
-        self.client = LivyClient(url, auth, verify_ssl=verify_ssl)
+        self.client = LivyClient(url, auth, verify=verify)
         self.kind = kind
         self.proxy_user = proxy_user
         self.jars = jars
@@ -158,7 +158,7 @@ class LivySession:
         self.spark_conf = spark_conf
         self.echo = echo
         self.check = check
-        self.verify_ssl = verify_ssl
+        self.verify = verify
         self.session_id: Optional[int] = None
 
     def __enter__(self) -> "LivySession":
