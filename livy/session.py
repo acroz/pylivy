@@ -158,7 +158,6 @@ class LivySession:
         self.spark_conf = spark_conf
         self.echo = echo
         self.check = check
-        self.verify = verify
         self.session_id: Optional[int] = None
 
     def __enter__(self) -> "LivySession":
