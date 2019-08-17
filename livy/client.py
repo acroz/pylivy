@@ -68,10 +68,8 @@ class LivyClient:
 
     :param url: The URL of the Livy server.
     :param auth: A requests-compatible auth object to use when making requests.
-    :param verify_ssl: This option is used when SSL authentication is used,
-        and the existence of the certificate
-        must be verified or certified with some certification authority.
-        Defaults to ``False``.
+    :param verify_ssl: Whether to verify the server's TLS certificate. Defaults
+        to ``True``.
     """
 
     def __init__(
