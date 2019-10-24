@@ -140,8 +140,9 @@ class LivySession:
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
+        headers: dict = {},
     ) -> None:
-        self.client = LivyClient(url, auth, verify=verify)
+        self.client = LivyClient(url, auth, verify=verify,headers=headers)
         self.kind = kind
         self.proxy_user = proxy_user
         self.jars = jars
