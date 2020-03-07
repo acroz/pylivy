@@ -4,7 +4,7 @@ import pytest
 import requests
 import pandas
 
-from livy import LivySession, SessionKind, SparkRuntimeError, SessionState
+from livy import LivySession, LivyBatch, SessionKind, SparkRuntimeError, SessionState, BatchState
 
 
 def livy_available(livy_url):
@@ -141,3 +141,24 @@ def test_sql_session(integration_url):
         assert session.read_sql("SELECT * FROM view").equals(expected)
 
     assert session_stopped(integration_url, session.session_id)
+
+
+@pytest.mark.integration
+def test_batch_job(integration_url):
+
+    assert livy_available(integration_url)
+
+    batch = LivyBatch(
+        integration_url,
+        file="https://repo.typesafe.com/typesafe/maven-releases/org/apache/spark/spark-examples_2.11/1.6.0-typesafe-001/spark-examples_2.11-1.6.0-typesafe-001.jar",
+        class_name="org.apache.spark.examples.SparkPi"
+    )
+    assert batch.batch_id is None
+
+    batch.start()
+    assert batch.state == BatchState.RUNNING
+
+    batch.kill()
+    assert batch.log == []
+    assert batch.state in (BatchState.SHUTTING_DOWN, BatchState.SUCCESS, BatchState.KILLED)
+
