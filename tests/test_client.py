@@ -1,3 +1,5 @@
+import pytest
+
 from livy.client import LivyClient
 from livy.models import Session, SessionKind, Statement, StatementKind, Batch, BatchLog
 
@@ -26,6 +28,18 @@ MOCK_BATCH_CLASSNAME = "com.example.application"
 MOCK_BATCH_ARGS = ["--arg1=1", "--arg2=2"]
 MOCK_BATCH_ID = 2398
 MOCK_BATCH_LOG_JSON = {"mock": "batch_log"}
+
+
+@pytest.mark.parametrize("verify", [True, False, "my/ca/bundle"])
+def test_verify(requests_mock, mocker, verify):
+    requests_mock.get("http://example.com/sessions", json={"sessions": []})
+    mocker.patch.object(Session, "from_json")
+
+    client = LivyClient("http://example.com", verify=verify)
+    client.list_sessions()
+
+    [request] = requests_mock.request_history
+    assert request.verify is verify
 
 
 def test_list_sessions(requests_mock, mocker):

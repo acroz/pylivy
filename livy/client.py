@@ -6,6 +6,7 @@ import requests
 from livy.models import Version, Session, SessionKind, Statement, StatementKind, Batch, BatchLog
 
 Auth = Union[requests.auth.AuthBase, Tuple[str, str]]
+Verify = Union[bool, str]
 
 
 LOGGER = logging.getLogger(__name__)
@@ -34,11 +35,14 @@ class JsonClient:
     HTTP code is received.
     """
 
-    def __init__(self, url: str, auth: Auth = None) -> None:
+    def __init__(
+        self, url: str, auth: Auth = None, verify: Verify = True
+    ) -> None:
         self.url = url
         self.session = requests.Session()
         if auth is not None:
             self.session.auth = auth
+        self.session.verify = verify
 
     def close(self) -> None:
         self.session.close()
@@ -64,10 +68,15 @@ class LivyClient:
 
     :param url: The URL of the Livy server.
     :param auth: A requests-compatible auth object to use when making requests.
+    :param verify: Either a boolean, in which case it controls whether we
+        verify the server’s TLS certificate, or a string, in which case it must
+        be a path to a CA bundle to use. Defaults to ``True``.
     """
 
-    def __init__(self, url: str, auth: Auth = None) -> None:
-        self._client = JsonClient(url, auth)
+    def __init__(
+        self, url: str, auth: Auth = None, verify: Verify = True
+    ) -> None:
+        self._client = JsonClient(url, auth, verify)
         self._server_version_cache: Optional[Version] = None
 
     def close(self) -> None:

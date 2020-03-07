@@ -27,3 +27,11 @@ Documentation
 -------------
 
 Documentation for ``pylivy`` is available at https://pylivy.readthedocs.io/.
+
+Contributing
+------------
+
+Contributions to extend or improve ``pylivy`` are very welcome! Have a look at
+`the relevant docs page
+<https://pylivy.readthedocs.io/en/latest/contributing.html>`_ for more
+information.
