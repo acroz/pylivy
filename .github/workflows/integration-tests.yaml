@@ -1,0 +1,25 @@
+name: Integration tests
+
+on: pull_request
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    services:
+      livy:
+        image: acroz/livy
+        ports:
+          - 8998:8998
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install Tox
+        run: pip install tox
+      - name: Run tests
+        run: tox -e py38-integration
