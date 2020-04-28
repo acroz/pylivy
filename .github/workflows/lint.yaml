@@ -1,22 +1,22 @@
-name: Unit tests
+name: Lint
 
 on: [push]
 
 jobs:
-  test:
+  lint:
 
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [3.6, 3.7, 3.8]
+        linter: [flake8, black, mypy]
 
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: ${{ matrix.python }}
+          python-version: 3.8
       - name: Install Tox
         run: pip install tox
-      - name: Run tests
-        run: tox -e py
+      - name: Run linter
+        run: tox -e ${{ matrix.linter }}
