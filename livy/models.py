@@ -181,7 +181,7 @@ class Batch:
     batch_id: int
     app_id: Optional[str]
     app_info: Optional[dict]
-    log: Optional[List[str]]
+    log: List[str]
     state: BatchState
 
     @classmethod
@@ -190,7 +190,7 @@ class Batch:
             data["id"],
             data["appId"],
             data["appInfo"],
-            data["log"],
+            data["log"] or [],
             BatchState(data["state"]),
         )
 
@@ -200,8 +200,8 @@ class BatchLog:
     batch_id: int
     offset: int
     size: int
-    lines: Optional[List[str]]
+    lines: List[str]
 
     @classmethod
     def from_json(cls, data: dict) -> "BatchLog":
-        return cls(data["id"], data["from"], data["size"], data["log"])
+        return cls(data["id"], data["from"], data["size"], data["log"] or [])
