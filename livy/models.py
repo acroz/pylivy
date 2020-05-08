@@ -188,9 +188,9 @@ class Batch:
     def from_json(cls, data: dict) -> "Batch":
         return cls(
             data["id"],
-            data["appId"],
-            data["appInfo"],
-            data["log"] or [],
+            data.get("appId"),
+            data.get("appInfo"),
+            data.get("log", []),
             SessionState(data["state"]),
         )
 
@@ -198,10 +198,12 @@ class Batch:
 @dataclass
 class BatchLog:
     batch_id: int
-    offset: int
-    size: int
+    from_: int
+    total: int
     lines: List[str]
 
     @classmethod
     def from_json(cls, data: dict) -> "BatchLog":
-        return cls(data["id"], data["from"], data["size"], data["log"] or [])
+        return cls(
+            data["id"], data["from"], data["total"], data.get("log", [])
+        )

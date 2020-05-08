@@ -173,9 +173,6 @@ def test_batch_from_json():
 def test_batch_from_json_no_optionals():
     batch_json = {
         "id": 2398,
-        "appId": None,
-        "appInfo": None,
-        "log": None,
         "state": "starting",
     }
 
@@ -183,7 +180,7 @@ def test_batch_from_json_no_optionals():
         batch_id=2398,
         app_id=None,
         app_info=None,
-        log=None,
+        log=[],
         state=SessionState.STARTING,
     )
 
@@ -194,20 +191,20 @@ def test_batch_log_from_json():
     batch_log_json = {
         "id": 2398,
         "from": 100,
-        "size": 100,
+        "total": 100,
         "log": ["log1", "log2"],
     }
 
     expected = BatchLog(
-        batch_id=2398, offset=100, size=100, lines=["log1", "log2"]
+        batch_id=2398, from_=100, total=100, lines=["log1", "log2"]
     )
 
     assert BatchLog.from_json(batch_log_json) == expected
 
 
 def test_batch_log_from_json_no_log():
-    batch_log_json = {"id": 2398, "from": 0, "size": 100, "log": None}
+    batch_log_json = {"id": 2398, "from": 0, "total": 100}
 
-    expected = BatchLog(batch_id=2398, offset=0, size=100, lines=None)
+    expected = BatchLog(batch_id=2398, from_=0, total=100, lines=[])
 
     assert BatchLog.from_json(batch_log_json) == expected

@@ -399,19 +399,21 @@ class LivyClient:
         return Batch.from_json(data)
 
     def get_batch_log(
-        self, batch_id: int, offset: int = 0, limit: int = 100
+        self, batch_id: int, from_: int = None, size: int = None
     ) -> Optional[BatchLog]:
         """Get batch log so far.
 
         :param batch_id: The ID of the batch.
-        :param offset: Line amount to skip
-        :param limit: Line amount to retrieve
+        :param from_: Line amount to skip
+        :param size: Line amount to retrieve
         """
+        params = {}
+        if from_ is not None:
+            params["from"] = from_
+        if size is not None:
+            params["size"] = size
         try:
-            data = self._client.get(
-                f"/batches/{batch_id}/log",
-                params={"from": offset, "size": limit},
-            )
+            data = self._client.get(f"/batches/{batch_id}/log", params=params)
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 return None

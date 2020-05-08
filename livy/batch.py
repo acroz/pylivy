@@ -144,13 +144,11 @@ class LivyBatch:
             )
         return batch.state
 
-    def log(self, offset: int = 0, limit: int = 100) -> List[str]:
+    def log(self, from_: int = None, size: int = None) -> List[str]:
         """Get logs"""
         if self.batch_id is None:
             raise ValueError("batch session not yet started")
-        log = self.client.get_batch_log(
-            self.batch_id, offset=offset, limit=limit
-        )
+        log = self.client.get_batch_log(self.batch_id, from_, size)
         if log is None:
             raise ValueError(
                 "batch session not found - it may have been shut down"
