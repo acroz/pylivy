@@ -31,6 +31,7 @@ class LivyBatch:
 
     :param url: The URL of the Livy server.
     :param file: File containing the application to execute.
+    :param auth: A requests-compatible auth object to use when making requests.
     :param class_name: Application Java/Spark main class.
     :param proxy_user: User to impersonate when starting the session.
     :param jars: URLs of jars to be used in this session.
