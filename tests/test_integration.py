@@ -10,7 +10,6 @@ from livy import (
     SessionKind,
     SparkRuntimeError,
     SessionState,
-    SessionState,
 )
 
 
