@@ -170,10 +170,10 @@ def test_batch_job(integration_url):
 
     assert batch.state == SessionState.RUNNING
 
-    batch.kill()
-    assert batch.log() == []
-    assert batch.state in (
-        SessionState.SHUTTING_DOWN,
-        SessionState.SUCCESS,
-        SessionState.KILLED,
+    batch.wait()
+
+    assert batch.state == SessionState.SUCCESS
+    assert any(
+        "spark.SparkContext: Successfully stopped SparkContext" in line
+        for line in batch.log()
     )
