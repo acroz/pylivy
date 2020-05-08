@@ -19,6 +19,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     use_scm_version={"version_scheme": "post-release"},
     setup_requires=["wheel", "setuptools_scm"],
