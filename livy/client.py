@@ -3,7 +3,15 @@ from typing import Any, Union, Dict, List, Tuple, Optional
 
 import requests
 
-from livy.models import Version, Session, SessionKind, Statement, StatementKind, Batch, BatchLog
+from livy.models import (
+    Version,
+    Session,
+    SessionKind,
+    Statement,
+    StatementKind,
+    Batch,
+    BatchLog,
+)
 
 Auth = Union[requests.auth.AuthBase, Tuple[str, str]]
 Verify = Union[bool, str]
@@ -56,7 +64,13 @@ class JsonClient:
     def delete(self, endpoint: str = "") -> dict:
         return self._request("DELETE", endpoint)
 
-    def _request(self, method: str, endpoint: str, data: dict = None, params: dict = None) -> dict:
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        data: dict = None,
+        params: dict = None,
+    ) -> dict:
         url = self.url.rstrip("/") + endpoint
         response = self.session.request(method, url, json=data, params=params)
         response.raise_for_status()
@@ -268,23 +282,23 @@ class LivyClient:
         return Statement.from_json(session_id, response)
 
     def create_batch(
-            self,
-            file: str,
-            class_name: str = None,
-            args: List[str] = None,
-            proxy_user: str = None,
-            jars: List[str] = None,
-            py_files: List[str] = None,
-            files: List[str] = None,
-            driver_memory: str = None,
-            driver_cores: int = None,
-            executor_memory: str = None,
-            executor_cores: int = None,
-            num_executors: int = None,
-            archives: List[str] = None,
-            queue: str = None,
-            name: str = None,
-            spark_conf: Dict[str, Any] = None,
+        self,
+        file: str,
+        class_name: str = None,
+        args: List[str] = None,
+        proxy_user: str = None,
+        jars: List[str] = None,
+        py_files: List[str] = None,
+        files: List[str] = None,
+        driver_memory: str = None,
+        driver_cores: int = None,
+        executor_memory: str = None,
+        executor_cores: int = None,
+        num_executors: int = None,
+        archives: List[str] = None,
+        queue: str = None,
+        name: str = None,
+        spark_conf: Dict[str, Any] = None,
     ) -> Batch:
         """Create a new batch in Livy.
 
@@ -384,7 +398,9 @@ class LivyClient:
                 raise
         return Batch.from_json(data)
 
-    def get_batch_log(self, batch_id: int, offset: int = 0, limit: int = 100) -> Optional[BatchLog]:
+    def get_batch_log(
+        self, batch_id: int, offset: int = 0, limit: int = 100
+    ) -> Optional[BatchLog]:
         """Get batch log so far.
 
         :param batch_id: The ID of the batch.
@@ -392,7 +408,10 @@ class LivyClient:
         :param limit: Line amount to retrieve
         """
         try:
-            data = self._client.get(f"/batches/{batch_id}/log", params={"from": offset, "size": limit})
+            data = self._client.get(
+                f"/batches/{batch_id}/log",
+                params={"from": offset, "size": limit},
+            )
         except requests.HTTPError as e:
             if e.response.status_code == 404:
                 return None
@@ -404,7 +423,4 @@ class LivyClient:
         """Get all known batches (old ones may not be returned).
         """
         response = self._client.get(f"/batches")
-        return [
-            Batch.from_json(data)
-            for data in response["sessions"]
-        ]
+        return [Batch.from_json(data) for data in response["sessions"]]

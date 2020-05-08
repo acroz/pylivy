@@ -12,7 +12,7 @@ from livy.models import (
     SparkRuntimeError,
     BatchState,
     BatchLog,
-    Batch
+    Batch,
 )
 
 
@@ -157,7 +157,7 @@ def test_batch_from_json():
         "appId": "application_000000000000_000001",
         "appInfo": {"key1": "val1", "key2": "val2"},
         "log": ["log1", "log2"],
-        "state": "running"
+        "state": "running",
     }
 
     expected = Batch(
@@ -165,7 +165,7 @@ def test_batch_from_json():
         app_id="application_000000000000_000001",
         app_info={"key1": "val1", "key2": "val2"},
         log=["log1", "log2"],
-        state=BatchState.RUNNING
+        state=BatchState.RUNNING,
     )
 
     assert Batch.from_json(batch_json) == expected
@@ -177,7 +177,7 @@ def test_batch_from_json_no_optionals():
         "appId": None,
         "appInfo": None,
         "log": None,
-        "state": "starting"
+        "state": "starting",
     }
 
     expected = Batch(
@@ -185,7 +185,7 @@ def test_batch_from_json_no_optionals():
         app_id=None,
         app_info=None,
         log=None,
-        state=BatchState.STARTING
+        state=BatchState.STARTING,
     )
 
     assert Batch.from_json(batch_json) == expected
@@ -196,35 +196,19 @@ def test_batch_log_from_json():
         "id": 2398,
         "from": 100,
         "size": 100,
-        "log": ["log1", "log2"]
+        "log": ["log1", "log2"],
     }
 
     expected = BatchLog(
-        batch_id=2398,
-        offset=100,
-        size=100,
-        lines=["log1", "log2"]
+        batch_id=2398, offset=100, size=100, lines=["log1", "log2"]
     )
 
     assert BatchLog.from_json(batch_log_json) == expected
 
 
 def test_batch_log_from_json_no_log():
-    batch_log_json = {
-        "id": 2398,
-        "from": 0,
-        "size": 100,
-        "log": None
-    }
+    batch_log_json = {"id": 2398, "from": 0, "size": 100, "log": None}
 
-    expected = BatchLog(
-        batch_id=2398,
-        offset=0,
-        size=100,
-        lines=None
-    )
+    expected = BatchLog(batch_id=2398, offset=0, size=100, lines=None)
 
     assert BatchLog.from_json(batch_log_json) == expected
-
-
-

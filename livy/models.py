@@ -204,9 +204,4 @@ class BatchLog:
 
     @classmethod
     def from_json(cls, data: dict) -> "BatchLog":
-        return cls(
-            data["id"],
-            data["from"],
-            data["size"],
-            data["log"]
-        )
+        return cls(data["id"], data["from"], data["size"], data["log"])

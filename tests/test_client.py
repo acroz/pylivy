@@ -1,7 +1,14 @@
 import pytest
 
 from livy.client import LivyClient
-from livy.models import Session, SessionKind, Statement, StatementKind, Batch, BatchLog
+from livy.models import (
+    Session,
+    SessionKind,
+    Statement,
+    StatementKind,
+    Batch,
+    BatchLog,
+)
 
 
 MOCK_SESSION_JSON = {"mock": "session"}
@@ -235,8 +242,7 @@ def test_create_batch(requests_mock, mocker):
 
 def test_get_batch(requests_mock, mocker):
     requests_mock.get(
-        f"http://example.com/batches/{MOCK_BATCH_ID}",
-        json=MOCK_BATCH_JSON,
+        f"http://example.com/batches/{MOCK_BATCH_ID}", json=MOCK_BATCH_JSON,
     )
     mocker.patch.object(Batch, "from_json")
 

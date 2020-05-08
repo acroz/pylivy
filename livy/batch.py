@@ -54,27 +54,27 @@ class LivyBatch:
     """
 
     def __init__(
-            self,
-            url: str,
-            auth: Auth = None,
-            file: str = None,
-            class_name: str = None,
-            args: List[str] = None,
-            proxy_user: str = None,
-            jars: List[str] = None,
-            py_files: List[str] = None,
-            files: List[str] = None,
-            driver_memory: str = None,
-            driver_cores: int = None,
-            executor_memory: str = None,
-            executor_cores: int = None,
-            num_executors: int = None,
-            archives: List[str] = None,
-            queue: str = None,
-            name: str = None,
-            spark_conf: Dict[str, Any] = None,
-            echo: bool = True,
-            check: bool = True,
+        self,
+        url: str,
+        auth: Auth = None,
+        file: str = None,
+        class_name: str = None,
+        args: List[str] = None,
+        proxy_user: str = None,
+        jars: List[str] = None,
+        py_files: List[str] = None,
+        files: List[str] = None,
+        driver_memory: str = None,
+        driver_cores: int = None,
+        executor_memory: str = None,
+        executor_cores: int = None,
+        num_executors: int = None,
+        archives: List[str] = None,
+        queue: str = None,
+        name: str = None,
+        spark_conf: Dict[str, Any] = None,
+        echo: bool = True,
+        check: bool = True,
     ) -> None:
         self.client = LivyClient(url, auth)
         self.file = file
@@ -121,8 +121,12 @@ class LivyBatch:
 
     def wait(self) -> BatchState:
         in_progress = {
-            BatchState.NOT_STARTED, BatchState.STARTING, BatchState.RECOVERING,
-            BatchState.RUNNING, BatchState.BUSY, BatchState.SHUTTING_DOWN
+            BatchState.NOT_STARTED,
+            BatchState.STARTING,
+            BatchState.RECOVERING,
+            BatchState.RUNNING,
+            BatchState.BUSY,
+            BatchState.SHUTTING_DOWN,
         }
         intervals = polling_intervals([0.1, 0.5, 1.0, 3.0], 5.0)
 
@@ -141,16 +145,22 @@ class LivyBatch:
             raise ValueError("batch session not yet started")
         batch = self.client.get_batch(self.batch_id)
         if batch is None:
-            raise ValueError("batch session not found - it may have been shut down")
+            raise ValueError(
+                "batch session not found - it may have been shut down"
+            )
         return batch.state
 
     def log(self, offset: int = 0, limit: int = 100) -> List[str]:
         """Get logs"""
         if self.batch_id is None:
             raise ValueError("batch session not yet started")
-        log = self.client.get_batch_log(self.batch_id, offset=offset, limit=limit)
+        log = self.client.get_batch_log(
+            self.batch_id, offset=offset, limit=limit
+        )
         if log is None:
-            raise ValueError("batch session not found - it may have been shut down")
+            raise ValueError(
+                "batch session not found - it may have been shut down"
+            )
         return log.lines
 
     def kill(self) -> None:
