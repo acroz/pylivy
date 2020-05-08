@@ -16,8 +16,9 @@ jobs:
       matrix:
         python: [3.6, 3.7, 3.8]
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Python
         uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python }}
@@ -32,8 +33,9 @@ jobs:
       matrix:
         linter: [flake8, black, mypy]
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Python
         uses: actions/setup-python@v1
         with:
           python-version: 3.8
@@ -51,8 +53,9 @@ jobs:
         ports:
           - 8998:8998
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Python
         uses: actions/setup-python@v1
         with:
           python-version: 3.8
