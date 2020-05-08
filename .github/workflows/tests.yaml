@@ -37,6 +37,7 @@ jobs:
         run: tox -e ${{ matrix.linter }}
 
   integration-tests:
+    needs: [tests, lint]
     runs-on: ubuntu-latest
     services:
       livy:
