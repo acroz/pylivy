@@ -56,8 +56,8 @@ class LivyBatch:
     def __init__(
         self,
         url: str,
+        file: str,
         auth: Auth = None,
-        file: str = None,
         class_name: str = None,
         args: List[str] = None,
         proxy_user: str = None,
