@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.6, 3.7, 3.8]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Tox
+        run: pip install tox
+      - name: Run tests
+        run: tox -e py
+
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        linter: [flake8, black, mypy]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install Tox
+        run: pip install tox
+      - name: Run linter
+        run: tox -e ${{ matrix.linter }}
+
+  integration-tests:
+    needs: [tests, lint]
+    runs-on: ubuntu-latest
+    services:
+      livy:
+        image: acroz/livy
+        ports:
+          - 8998:8998
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.8
+      - name: Install Tox
+        run: pip install tox
+      - name: Run tests
+        run: tox -e py38-integration
