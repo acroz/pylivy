@@ -150,6 +150,15 @@ class SessionState(Enum):
     SUCCESS = "success"
 
 
+SESSION_STATE_NOT_READY = {SessionState.NOT_STARTED, SessionState.STARTING}
+SESSION_STATE_FINISHED = {
+    SessionState.ERROR,
+    SessionState.DEAD,
+    SessionState.KILLED,
+    SessionState.SUCCESS,
+}
+
+
 @dataclass
 class Session:
     session_id: int

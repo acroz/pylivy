@@ -2,7 +2,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from livy.client import LivyClient, Auth
-from livy.models import SessionState
+from livy.models import SessionState, SESSION_STATE_FINISHED
 from livy.utils import polling_intervals
 
 
@@ -121,19 +121,12 @@ class LivyBatch:
         self.batch_id = batch.batch_id
 
     def wait(self) -> SessionState:
-        in_progress = {
-            SessionState.NOT_STARTED,
-            SessionState.STARTING,
-            SessionState.RECOVERING,
-            SessionState.RUNNING,
-            SessionState.BUSY,
-            SessionState.SHUTTING_DOWN,
-        }
+
         intervals = polling_intervals([0.1, 0.5, 1.0, 3.0], 5.0)
 
         while True:
             state = self.state
-            if state not in in_progress:
+            if state in SESSION_STATE_FINISHED:
                 break
             time.sleep(next(intervals))
 

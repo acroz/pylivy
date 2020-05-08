@@ -5,8 +5,15 @@ from typing import Any, Dict, List, Optional
 import pandas
 
 from livy.client import LivyClient, Auth, Verify
-from livy.models import SessionKind, SessionState, StatementState, Output
+from livy.models import (
+    SessionKind,
+    SessionState,
+    StatementState,
+    Output,
+    SESSION_STATE_NOT_READY,
+)
 from livy.utils import polling_intervals
+
 
 SERIALISE_DATAFRAME_TEMPLATE_SPARK = "{}.toJSON.collect.foreach(println)"
 SERIALISE_DATAFRAME_TEMPLATE_PYSPARK = """
@@ -172,10 +179,8 @@ class LivySession:
         )
         self.session_id = session.session_id
 
-        not_ready = {SessionState.NOT_STARTED, SessionState.STARTING}
         intervals = polling_intervals([0.1, 0.2, 0.3, 0.5], 1.0)
-
-        while self.state in not_ready:
+        while self.state in SESSION_STATE_NOT_READY:
             time.sleep(next(intervals))
 
     @property
