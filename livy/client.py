@@ -185,7 +185,7 @@ class LivyClient:
                 f"this version (should be one of {valid_kinds})"
             )
 
-        body = {"kind": kind.value}
+        body: Dict[str, Any] = {"kind": kind.value}
         if proxy_user is not None:
             body["proxyUser"] = proxy_user
         if jars is not None:
@@ -342,7 +342,7 @@ class LivyClient:
         :param spark_conf: Spark configuration properties.
         """
 
-        body = {"file": file}
+        body: Dict[str, Any] = {"file": file}
         if class_name is not None:
             body["className"] = class_name
         if args is not None:
