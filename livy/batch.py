@@ -2,7 +2,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from livy.client import LivyClient, Auth
-from livy.models import BatchState
+from livy.models import SessionState
 from livy.utils import polling_intervals
 
 
@@ -120,14 +120,14 @@ class LivyBatch:
         )
         self.batch_id = batch.batch_id
 
-    def wait(self) -> BatchState:
+    def wait(self) -> SessionState:
         in_progress = {
-            BatchState.NOT_STARTED,
-            BatchState.STARTING,
-            BatchState.RECOVERING,
-            BatchState.RUNNING,
-            BatchState.BUSY,
-            BatchState.SHUTTING_DOWN,
+            SessionState.NOT_STARTED,
+            SessionState.STARTING,
+            SessionState.RECOVERING,
+            SessionState.RUNNING,
+            SessionState.BUSY,
+            SessionState.SHUTTING_DOWN,
         }
         intervals = polling_intervals([0.1, 0.5, 1.0, 3.0], 5.0)
 
@@ -140,7 +140,7 @@ class LivyBatch:
         return state
 
     @property
-    def state(self) -> BatchState:
+    def state(self) -> SessionState:
         """The state of the managed Spark batch."""
         if self.batch_id is None:
             raise ValueError("batch session not yet started")

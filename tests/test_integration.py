@@ -10,7 +10,7 @@ from livy import (
     SessionKind,
     SparkRuntimeError,
     SessionState,
-    BatchState,
+    SessionState,
 )
 
 
@@ -167,12 +167,13 @@ def test_batch_job(integration_url):
     assert batch.batch_id is None
 
     batch.start()
-    assert batch.state == BatchState.RUNNING
+
+    assert batch.state == SessionState.RUNNING
 
     batch.kill()
     assert batch.log == []
     assert batch.state in (
-        BatchState.SHUTTING_DOWN,
-        BatchState.SUCCESS,
-        BatchState.KILLED,
+        SessionState.SHUTTING_DOWN,
+        SessionState.SUCCESS,
+        SessionState.KILLED,
     )

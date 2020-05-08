@@ -10,7 +10,6 @@ from livy.models import (
     Output,
     OutputStatus,
     SparkRuntimeError,
-    BatchState,
     BatchLog,
     Batch,
 )
@@ -165,7 +164,7 @@ def test_batch_from_json():
         app_id="application_000000000000_000001",
         app_info={"key1": "val1", "key2": "val2"},
         log=["log1", "log2"],
-        state=BatchState.RUNNING,
+        state=SessionState.RUNNING,
     )
 
     assert Batch.from_json(batch_json) == expected
@@ -185,7 +184,7 @@ def test_batch_from_json_no_optionals():
         app_id=None,
         app_info=None,
         log=None,
-        state=BatchState.STARTING,
+        state=SessionState.STARTING,
     )
 
     assert Batch.from_json(batch_json) == expected

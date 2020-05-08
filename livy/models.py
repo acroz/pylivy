@@ -133,14 +133,20 @@ class SessionKind(Enum):
     SHARED = "shared"
 
 
+# Possible session states are defined here:
+# https://github.com/apache/incubator-livy/blob/master/core/src/main/scala/
+# org/apache/livy/sessions/SessionState.scala
 class SessionState(Enum):
     NOT_STARTED = "not_started"
     STARTING = "starting"
+    RECOVERING = "recovering"
     IDLE = "idle"
+    RUNNING = "running"
     BUSY = "busy"
     SHUTTING_DOWN = "shutting_down"
     ERROR = "error"
     DEAD = "dead"
+    KILLED = "killed"
     SUCCESS = "success"
 
 
@@ -161,28 +167,13 @@ class Session:
         )
 
 
-# https://github.com/apache/incubator-livy/blob/branch-0.6/core/src/main/scala/org/apache/livy/sessions/SessionState.scala#L32
-class BatchState(Enum):
-    NOT_STARTED = "not_started"
-    STARTING = "starting"
-    RECOVERING = "recovering"
-    IDLE = "idle"
-    RUNNING = "running"
-    BUSY = "busy"
-    SHUTTING_DOWN = "shutting_down"
-    KILLED = "killed"
-    ERROR = "error"
-    DEAD = "dead"
-    SUCCESS = "success"
-
-
 @dataclass
 class Batch:
     batch_id: int
     app_id: Optional[str]
     app_info: Optional[dict]
     log: List[str]
-    state: BatchState
+    state: SessionState
 
     @classmethod
     def from_json(cls, data: dict) -> "Batch":
@@ -191,7 +182,7 @@ class Batch:
             data["appId"],
             data["appInfo"],
             data["log"] or [],
-            BatchState(data["state"]),
+            SessionState(data["state"]),
         )
 
 

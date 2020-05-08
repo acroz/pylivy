@@ -4,5 +4,4 @@ from livy.models import (  # noqa: F401
     SessionKind,
     SessionState,
     SparkRuntimeError,
-    BatchState,
 )
