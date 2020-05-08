@@ -157,7 +157,11 @@ def test_batch_job(integration_url):
 
     batch = LivyBatch(
         integration_url,
-        file="https://repo.typesafe.com/typesafe/maven-releases/org/apache/spark/spark-examples_2.11/1.6.0-typesafe-001/spark-examples_2.11-1.6.0-typesafe-001.jar",
+        file=(
+            "https://repo.typesafe.com/typesafe/maven-releases/org/apache/"
+            "spark/spark-examples_2.11/1.6.0-typesafe-001/"
+            "spark-examples_2.11-1.6.0-typesafe-001.jar"
+        ),
         class_name="org.apache.spark.examples.SparkPi",
     )
     assert batch.batch_id is None
