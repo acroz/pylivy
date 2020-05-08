@@ -171,7 +171,7 @@ def test_batch_job(integration_url):
     assert batch.state == SessionState.RUNNING
 
     batch.kill()
-    assert batch.log == []
+    assert batch.log() == []
     assert batch.state in (
         SessionState.SHUTTING_DOWN,
         SessionState.SUCCESS,
