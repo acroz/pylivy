@@ -401,11 +401,11 @@ class LivyClient:
     def get_batch_log(
         self, batch_id: int, from_: int = None, size: int = None
     ) -> Optional[BatchLog]:
-        """Get batch log so far.
+        """Get logs for a batch.
 
         :param batch_id: The ID of the batch.
-        :param from_: Line amount to skip
-        :param size: Line amount to retrieve
+        :param from_: The line number to start getting logs from.
+        :param size: The number of lines of logs to get.
         """
         params = {}
         if from_ is not None:
@@ -422,7 +422,6 @@ class LivyClient:
         return BatchLog.from_json(data)
 
     def list_batches(self) -> List[Batch]:
-        """Get all known batches (old ones may not be returned).
-        """
-        response = self._client.get(f"/batches")
+        """List all the active batches in Livy."""
+        response = self._client.get("/batches")
         return [Batch.from_json(data) for data in response["sessions"]]
