@@ -99,7 +99,10 @@ class LivyBatch:
         self.batch_id: Optional[int] = None
 
     def start(self) -> None:
-        """Create the remote Spark session (don't wait it to be ready)."""
+        """Create the batch session.
+
+        Unlike LivySession, this does not wait for the session to be ready.
+        """
         batch = self.client.create_batch(
             self.file,
             self.class_name,
