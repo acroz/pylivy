@@ -48,10 +48,6 @@ class LivyBatch:
     :param queue: The name of the YARN queue to which submitted.
     :param name: The name of this session.
     :param spark_conf: Spark configuration properties.
-    :param echo: Whether to echo output printed in the remote session. Defaults
-        to ``True``.
-    :param check: Whether to raise an exception when a statement in the remote
-        session fails. Defaults to ``True``.
     """
 
     def __init__(
@@ -74,8 +70,6 @@ class LivyBatch:
         queue: str = None,
         name: str = None,
         spark_conf: Dict[str, Any] = None,
-        echo: bool = True,
-        check: bool = True,
     ) -> None:
         self.client = LivyClient(url, auth)
         self.file = file
@@ -94,8 +88,6 @@ class LivyBatch:
         self.queue = queue
         self.name = name
         self.spark_conf = spark_conf
-        self.echo = echo
-        self.check = check
         self.batch_id: Optional[int] = None
 
     def start(self) -> None:
