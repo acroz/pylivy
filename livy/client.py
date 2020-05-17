@@ -3,8 +3,15 @@ from typing import Any, Union, Dict, List, Tuple, Optional
 
 import requests
 
-from livy.models import Version, Session, SessionKind, Statement, StatementKind
-
+from livy.models import (
+    Version,
+    Session,
+    SessionKind,
+    Statement,
+    StatementKind,
+    Batch,
+    BatchLog,
+)
 
 Auth = Union[requests.auth.AuthBase, Tuple[str, str]]
 Verify = Union[bool, str]
@@ -48,7 +55,7 @@ class JsonClient:
     def close(self) -> None:
         self.session.close()
 
-    def get(self, endpoint: str = "") -> dict:
+    def get(self, endpoint: str = "", params: dict = None) -> dict:
         return self._request("GET", endpoint)
 
     def post(self, endpoint: str, data: dict = None) -> dict:
@@ -57,9 +64,15 @@ class JsonClient:
     def delete(self, endpoint: str = "") -> dict:
         return self._request("DELETE", endpoint)
 
-    def _request(self, method: str, endpoint: str, data: dict = None) -> dict:
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        data: dict = None,
+        params: dict = None,
+    ) -> dict:
         url = self.url.rstrip("/") + endpoint
-        response = self.session.request(method, url, json=data)
+        response = self.session.request(method, url, json=data, params=params)
         response.raise_for_status()
         return response.json()
 
@@ -172,7 +185,7 @@ class LivyClient:
                 f"this version (should be one of {valid_kinds})"
             )
 
-        body = {"kind": kind.value}
+        body: Dict[str, Any] = {"kind": kind.value}
         if proxy_user is not None:
             body["proxyUser"] = proxy_user
         if jars is not None:
@@ -267,3 +280,148 @@ class LivyClient:
             f"/sessions/{session_id}/statements/{statement_id}"
         )
         return Statement.from_json(session_id, response)
+
+    def create_batch(
+        self,
+        file: str,
+        class_name: str = None,
+        args: List[str] = None,
+        proxy_user: str = None,
+        jars: List[str] = None,
+        py_files: List[str] = None,
+        files: List[str] = None,
+        driver_memory: str = None,
+        driver_cores: int = None,
+        executor_memory: str = None,
+        executor_cores: int = None,
+        num_executors: int = None,
+        archives: List[str] = None,
+        queue: str = None,
+        name: str = None,
+        spark_conf: Dict[str, Any] = None,
+    ) -> Batch:
+        """Create a new batch in Livy.
+
+        The py_files, files, jars and archives arguments are lists of URLs,
+        e.g. ["s3://bucket/object", "hdfs://path/to/file", ...] and must be
+        reachable by the Spark driver process.  If the provided URL has no
+        scheme, it's considered to be relative to the default file system
+        configured in the Livy server.
+
+        URLs in the py_files argument are copied to a temporary staging area
+        and inserted into Python's sys.path ahead of the standard library
+        paths.  This allows you to import .py, .zip and .egg files in Python.
+
+        URLs for jars, py_files, files and archives arguments are all copied
+        to the same working directory on the Spark cluster.
+
+        The driver_memory and executor_memory arguments have the same format
+        as JVM memory strings with a size unit suffix ("k", "m", "g" or "t")
+        (e.g. 512m, 2g).
+
+        See https://spark.apache.org/docs/latest/configuration.html for more
+        information on Spark configuration properties.
+
+        :param file: File containing the application to execute.
+        :param class_name: Application Java/Spark main class.
+        :param args: An array of strings to be passed to the Spark app.
+        :param proxy_user: User to impersonate when starting the session.
+        :param jars: URLs of jars to be used in this session.
+        :param py_files: URLs of Python files to be used in this session.
+        :param files: URLs of files to be used in this session.
+        :param driver_memory: Amount of memory to use for the driver process
+            (e.g. '512m').
+        :param driver_cores: Number of cores to use for the driver process.
+        :param executor_memory: Amount of memory to use per executor process
+            (e.g. '512m').
+        :param executor_cores: Number of cores to use for each executor.
+        :param num_executors: Number of executors to launch for this session.
+        :param archives: URLs of archives to be used in this session.
+        :param queue: The name of the YARN queue to which submitted.
+        :param name: The name of this session.
+        :param spark_conf: Spark configuration properties.
+        """
+
+        body: Dict[str, Any] = {"file": file}
+        if class_name is not None:
+            body["className"] = class_name
+        if args is not None:
+            body["args"] = args
+        if proxy_user is not None:
+            body["proxyUser"] = proxy_user
+        if jars is not None:
+            body["jars"] = jars
+        if py_files is not None:
+            body["pyFiles"] = py_files
+        if files is not None:
+            body["files"] = files
+        if driver_memory is not None:
+            body["driverMemory"] = driver_memory
+        if driver_cores is not None:
+            body["driverCores"] = driver_cores
+        if executor_memory is not None:
+            body["executorMemory"] = executor_memory
+        if executor_cores is not None:
+            body["executorCores"] = executor_cores
+        if num_executors is not None:
+            body["numExecutors"] = num_executors
+        if archives is not None:
+            body["archives"] = archives
+        if queue is not None:
+            body["queue"] = queue
+        if name is not None:
+            body["name"] = name
+        if spark_conf is not None:
+            body["conf"] = spark_conf
+
+        data = self._client.post("/batches", data=body)
+        return Batch.from_json(data)
+
+    def delete_batch(self, batch_id: int) -> None:
+        """Kill a batch session.
+
+        :param batch_id: The ID of the session.
+        """
+        self._client.delete(f"/batches/{batch_id}")
+
+    def get_batch(self, batch_id: int) -> Optional[Batch]:
+        """Get information about a batch.
+
+        :param batch_id: The ID of the batch.
+        """
+        try:
+            data = self._client.get(f"/batches/{batch_id}")
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            else:
+                raise
+        return Batch.from_json(data)
+
+    def get_batch_log(
+        self, batch_id: int, from_: int = None, size: int = None
+    ) -> Optional[BatchLog]:
+        """Get logs for a batch.
+
+        :param batch_id: The ID of the batch.
+        :param from_: The line number to start getting logs from.
+        :param size: The number of lines of logs to get.
+        """
+        params = {}
+        if from_ is not None:
+            params["from"] = from_
+        if size is not None:
+            params["size"] = size
+        try:
+            data = self._client.get(f"/batches/{batch_id}/log", params=params)
+        except requests.HTTPError as e:
+            if e.response.status_code == 404:
+                return None
+            else:
+                raise
+        return BatchLog.from_json(data)
+
+    def list_batches(self) -> List[Batch]:
+        """List all the active batches in Livy."""
+        response = self._client.get("/batches")
+        return [Batch.from_json(data) for data in response["sessions"]]

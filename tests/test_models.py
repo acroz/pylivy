@@ -10,6 +10,8 @@ from livy.models import (
     Output,
     OutputStatus,
     SparkRuntimeError,
+    BatchLog,
+    Batch,
 )
 
 
@@ -146,3 +148,63 @@ def test_output_raise_for_status():
     error_output = Output(OutputStatus.ERROR, None, None, None, None, None)
     with pytest.raises(SparkRuntimeError):
         error_output.raise_for_status()
+
+
+def test_batch_from_json():
+    batch_json = {
+        "id": 2398,
+        "appId": "application_000000000000_000001",
+        "appInfo": {"key1": "val1", "key2": "val2"},
+        "log": ["log1", "log2"],
+        "state": "running",
+    }
+
+    expected = Batch(
+        batch_id=2398,
+        app_id="application_000000000000_000001",
+        app_info={"key1": "val1", "key2": "val2"},
+        log=["log1", "log2"],
+        state=SessionState.RUNNING,
+    )
+
+    assert Batch.from_json(batch_json) == expected
+
+
+def test_batch_from_json_no_optionals():
+    batch_json = {
+        "id": 2398,
+        "state": "starting",
+    }
+
+    expected = Batch(
+        batch_id=2398,
+        app_id=None,
+        app_info=None,
+        log=[],
+        state=SessionState.STARTING,
+    )
+
+    assert Batch.from_json(batch_json) == expected
+
+
+def test_batch_log_from_json():
+    batch_log_json = {
+        "id": 2398,
+        "from": 100,
+        "total": 100,
+        "log": ["log1", "log2"],
+    }
+
+    expected = BatchLog(
+        batch_id=2398, from_=100, total=100, lines=["log1", "log2"]
+    )
+
+    assert BatchLog.from_json(batch_log_json) == expected
+
+
+def test_batch_log_from_json_no_log():
+    batch_log_json = {"id": 2398, "from": 0, "total": 100}
+
+    expected = BatchLog(batch_id=2398, from_=0, total=100, lines=[])
+
+    assert BatchLog.from_json(batch_log_json) == expected

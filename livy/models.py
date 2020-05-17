@@ -133,15 +133,30 @@ class SessionKind(Enum):
     SHARED = "shared"
 
 
+# Possible session states are defined here:
+# https://github.com/apache/incubator-livy/blob/master/core/src/main/scala/
+# org/apache/livy/sessions/SessionState.scala
 class SessionState(Enum):
     NOT_STARTED = "not_started"
     STARTING = "starting"
+    RECOVERING = "recovering"
     IDLE = "idle"
+    RUNNING = "running"
     BUSY = "busy"
     SHUTTING_DOWN = "shutting_down"
     ERROR = "error"
     DEAD = "dead"
+    KILLED = "killed"
     SUCCESS = "success"
+
+
+SESSION_STATE_NOT_READY = {SessionState.NOT_STARTED, SessionState.STARTING}
+SESSION_STATE_FINISHED = {
+    SessionState.ERROR,
+    SessionState.DEAD,
+    SessionState.KILLED,
+    SessionState.SUCCESS,
+}
 
 
 @dataclass
@@ -158,4 +173,37 @@ class Session:
             data["proxyUser"],
             SessionKind(data["kind"]),
             SessionState(data["state"]),
+        )
+
+
+@dataclass
+class Batch:
+    batch_id: int
+    app_id: Optional[str]
+    app_info: Optional[dict]
+    log: List[str]
+    state: SessionState
+
+    @classmethod
+    def from_json(cls, data: dict) -> "Batch":
+        return cls(
+            data["id"],
+            data.get("appId"),
+            data.get("appInfo"),
+            data.get("log", []),
+            SessionState(data["state"]),
+        )
+
+
+@dataclass
+class BatchLog:
+    batch_id: int
+    from_: int
+    total: int
+    lines: List[str]
+
+    @classmethod
+    def from_json(cls, data: dict) -> "BatchLog":
+        return cls(
+            data["id"], data["from"], data["total"], data.get("log", [])
         )
