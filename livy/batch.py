@@ -116,6 +116,7 @@ class LivyBatch:
         self.batch_id = batch.batch_id
 
     def wait(self) -> SessionState:
+        """Wait for the batch session to finish."""
 
         intervals = polling_intervals([0.1, 0.5, 1.0, 3.0], 5.0)
 
@@ -140,7 +141,11 @@ class LivyBatch:
         return batch.state
 
     def log(self, from_: int = None, size: int = None) -> List[str]:
-        """Get logs"""
+        """Get logs for this Spark batch.
+
+        :param from_: The line number to start getting logs from.
+        :param size: The number of lines of logs to get.
+        """
         if self.batch_id is None:
             raise ValueError("batch session not yet started")
         log = self.client.get_batch_log(self.batch_id, from_, size)
