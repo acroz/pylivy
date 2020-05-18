@@ -100,7 +100,7 @@ def test_session(integration_url, capsys, session_kind, params):
 
     assert livy_available(integration_url)
 
-    with LivySession(integration_url, kind=session_kind) as session:
+    with LivySession.create(integration_url, kind=session_kind) as session:
 
         assert session.state == SessionState.IDLE
 
@@ -132,7 +132,7 @@ def test_sql_session(integration_url):
 
     assert livy_available(integration_url)
 
-    with LivySession(integration_url, kind=SessionKind.SQL) as session:
+    with LivySession.create(integration_url, kind=SessionKind.SQL) as session:
 
         assert session.state == SessionState.IDLE
 
