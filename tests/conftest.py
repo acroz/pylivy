@@ -4,11 +4,17 @@ import pytest
 def pytest_addoption(parser):
     parser.addoption(
         "--integration",
-        metavar="LIVY_URI",
+        metavar="LIVY_URL",
         nargs="?",
         const="http://localhost:8998",
-        help="Run integration tests against the specified Livy server URI "
-        + "(default: localhost)",
+        help="Run integration tests against the specified Livy server URL "
+        + "(default: http://localhost:8998)",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test"
     )
 
 
