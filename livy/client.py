@@ -332,7 +332,7 @@ class LivyClient:
         :param spark_conf: Spark configuration properties.
         """
 
-        batch_session_params = {"file": file}
+        batch_session_params: Dict[str, Any] = {"file": file}
         if class_name is not None:
             batch_session_params["className"] = class_name
         if args is not None:
