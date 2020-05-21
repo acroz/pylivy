@@ -1,5 +1,6 @@
 import time
 import json
+import requests
 from typing import Any, Dict, List, Optional
 
 import pandas
@@ -108,6 +109,9 @@ class LivySession:
         to ``True``.
     :param check: Whether to raise an exception when a statement in the remote
         session fails. Defaults to ``True``.
+    :param requests_session: a ``requests.Session`` object for advanced usage. If absent, this
+    class will use the default requests behavior of making a new session per HTTP request.
+    Caller is responsible for closing session.
     """
 
     def __init__(
@@ -131,8 +135,9 @@ class LivySession:
         spark_conf: Dict[str, Any] = None,
         echo: bool = True,
         check: bool = True,
+        requests_session: requests.Session = None
     ) -> None:
-        self.client = LivyClient(url, auth, verify=verify)
+        self.client = LivyClient(url, auth, verify=verify, requests_session=requests_session)
         self.kind = kind
         self.proxy_user = proxy_user
         self.jars = jars
