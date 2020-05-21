@@ -44,10 +44,10 @@ class JsonClient:
     """
 
     def __init__(
-        self, url: str, auth: Auth = None, verify: Verify = True
+        self, url: str, auth: Auth = None, verify: Verify = True, requests_session: requests.Session = None
     ) -> None:
         self.url = url
-        self.session = requests.Session()
+        self.session = requests_session or requests.Session()
         if auth is not None:
             self.session.auth = auth
         self.session.verify = verify
@@ -85,13 +85,17 @@ class LivyClient:
     :param verify: Either a boolean, in which case it controls whether we
         verify the server’s TLS certificate, or a string, in which case it must
         be a path to a CA bundle to use. Defaults to ``True``.
+    :param requests_session: a ``requests.Session`` object for advanced usage. If absent, this
+    class will use the default requests behavior of making a new session per HTTP request.
+    Caller is responsible for closing session.
     """
 
     def __init__(
-        self, url: str, auth: Auth = None, verify: Verify = True
+        self, url: str, auth: Auth = None, verify: Verify = True, requests_session: requests.Session = None
     ) -> None:
-        self._client = JsonClient(url, auth, verify)
+        self._client = JsonClient(url, auth, verify, requests_session)
         self._server_version_cache: Optional[Version] = None
+        self.requests_session = requests_session
 
     def close(self) -> None:
         """Close the underlying requests session."""
