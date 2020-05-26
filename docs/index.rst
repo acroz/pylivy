@@ -1,10 +1,13 @@
 pylivy
 ======
 
-.. image:: https://travis-ci.org/acroz/pylivy.svg?branch=master
-    :target: https://travis-ci.org/acroz/pylivy
+.. image:: https://github.com/acroz/pylivy/workflows/Tests/badge.svg?branch=master
+    :target: https://github.com/acroz/pylivy/actions
 
 .. image:: https://badge.fury.io/py/livy.svg
+    :target: https://pypi.org/project/livy/
+
+.. image:: https://img.shields.io/pypi/pyversions/livy.svg
     :target: https://pypi.org/project/livy/
 
 `Livy <https://livy.incubator.apache.org/>`_ is an open source REST interface
