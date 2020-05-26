@@ -58,6 +58,7 @@ API Documentation
     :maxdepth: 2
 
     api/session
+    api/batch
     api/client
 
 Contributing
