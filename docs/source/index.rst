@@ -26,8 +26,8 @@ Note that ``pylivy`` requires Python 3.6 or later.
 Usage
 -----
 
-The :class:`LivySession <livy.session.LivySession>` class is the main interface
-provided by ``pylivy``::
+The :class:`~livy.session.LivySession` class is the main interface provided by
+``pylivy``::
 
     from livy import LivySession
 
@@ -50,6 +50,24 @@ Authenticate requests sent to Livy by passing `any requests Auth object
     with LivySession(LIVY_URL, auth) as session:
         session.run("filtered = df.filter(df.name == 'Bob')")
         local_df = session.read('filtered')
+
+Similarly, batch sessions in Livy can be created and managed with the
+:class:`~livy.batch.LivyBatch` class::
+
+    from livy import LivyBatch
+
+    LIVY_URL = 'http://spark.example.com:8998'
+
+    batch = LivyBatch(
+        integration_url,
+        file=(
+            "https://repo.typesafe.com/typesafe/maven-releases/org/"
+            "apache/spark/spark-examples_2.11/1.6.0-typesafe-001/"
+            "spark-examples_2.11-1.6.0-typesafe-001.jar"
+        ),
+        class_name="org.apache.spark.examples.SparkPi",
+    )
+    batch.wait()
 
 API Documentation
 -----------------
