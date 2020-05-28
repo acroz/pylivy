@@ -50,14 +50,21 @@ class JsonClient:
         verify: Verify = True,
         requests_session: requests.Session = None,
     ) -> None:
+
         self.url = url
-        self.session = requests_session or requests.Session()
-        if auth is not None:
-            self.session.auth = auth
-        self.session.verify = verify
+        self.auth = auth
+        self.verify = verify
+
+        if requests_session is None:
+            self.session = requests.Session()
+            self.managed_session = True
+        else:
+            self.session = requests_session
+            self.managed_session = False
 
     def close(self) -> None:
-        self.session.close()
+        if self.managed_session:
+            self.session.close()
 
     def get(self, endpoint: str = "", params: dict = None) -> dict:
         return self._request("GET", endpoint)
@@ -76,7 +83,14 @@ class JsonClient:
         params: dict = None,
     ) -> dict:
         url = self.url.rstrip("/") + endpoint
-        response = self.session.request(method, url, json=data, params=params)
+        response = self.session.request(
+            method,
+            url,
+            auth=self.auth,
+            verify=self.verify,
+            json=data,
+            params=params,
+        )
         response.raise_for_status()
         return response.json()
 
@@ -89,9 +103,8 @@ class LivyClient:
     :param verify: Either a boolean, in which case it controls whether we
         verify the server’s TLS certificate, or a string, in which case it must
         be a path to a CA bundle to use. Defaults to ``True``.
-    :param requests_session: A ``requests.Session`` object for advanced usage.
-        If absent, this class will use the default requests behavior of making
-        a new session per HTTP request. Caller is responsible for closing
+    :param requests_session: A specific ``requests.Session`` to use, allowing
+        advanced customisation. The caller is responsible for closing the
         session.
     """
 
@@ -106,7 +119,7 @@ class LivyClient:
         self._server_version_cache: Optional[Version] = None
 
     def close(self) -> None:
-        """Close the underlying requests session."""
+        """Close the underlying requests session, if managed by this class."""
         self._client.close()
 
     def server_version(self) -> Version:
