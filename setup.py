@@ -28,5 +28,5 @@ setup(
         "requests",
         "pandas",
     ],
-    extras_require={"docs": ["sphinx-autodoc-typehints"]},
+    extras_require={"docs": ["sphinx", "sphinx-autodoc-typehints"]},
 )
