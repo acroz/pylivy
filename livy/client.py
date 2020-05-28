@@ -89,9 +89,10 @@ class LivyClient:
     :param verify: Either a boolean, in which case it controls whether we
         verify the server’s TLS certificate, or a string, in which case it must
         be a path to a CA bundle to use. Defaults to ``True``.
-    :param requests_session: a ``requests.Session`` object for advanced usage.
-    If absent, this class will use the default requests behavior of making a
-    new session per HTTP request. Caller is responsible for closing session.
+    :param requests_session: A ``requests.Session`` object for advanced usage.
+        If absent, this class will use the default requests behavior of making
+        a new session per HTTP request. Caller is responsible for closing
+        session.
     """
 
     def __init__(

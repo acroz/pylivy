@@ -75,9 +75,10 @@ class LivySession:
         to ``True``.
     :param check: Whether to raise an exception when a statement in the remote
         session fails. Defaults to ``True``.
-    :param requests_session: a ``requests.Session`` object for advanced usage.
-    If absent, this class will use the default requests behavior of making a
-    new session per HTTP request. Caller is responsible for closing session.
+    :param requests_session: A ``requests.Session`` object for advanced usage.
+        If absent, this class will use the default requests behavior of making
+        a new session per HTTP request. Caller is responsible for closing
+        session.
     """
 
     def __init__(
