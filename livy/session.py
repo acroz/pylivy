@@ -2,6 +2,7 @@ import time
 import json
 from typing import Any, Dict, List
 
+import requests
 import pandas
 
 from livy.client import LivyClient, Auth, Verify
@@ -69,6 +70,9 @@ class LivySession:
     :param verify: Either a boolean, in which case it controls whether we
         verify the server’s TLS certificate, or a string, in which case it must
         be a path to a CA bundle to use. Defaults to ``True``.
+    :param requests_session: A specific ``requests.Session`` to use, allowing
+        advanced customisation. The caller is responsible for closing the
+        session.
     :param kind: The kind of session to create.
     :param echo: Whether to echo output printed in the remote session. Defaults
         to ``True``.
@@ -82,11 +86,12 @@ class LivySession:
         session_id: int,
         auth: Auth = None,
         verify: Verify = True,
+        requests_session: requests.Session = None,
         kind: SessionKind = SessionKind.PYSPARK,
         echo: bool = True,
         check: bool = True,
     ) -> None:
-        self.client = LivyClient(url, auth, verify=verify)
+        self.client = LivyClient(url, auth, verify, requests_session)
         self.session_id = session_id
         self.kind = kind
         self.echo = echo
@@ -98,6 +103,7 @@ class LivySession:
         url: str,
         auth: Auth = None,
         verify: Verify = True,
+        requests_session: requests.Session = None,
         kind: SessionKind = SessionKind.PYSPARK,
         proxy_user: str = None,
         jars: List[str] = None,
@@ -143,6 +149,9 @@ class LivySession:
         :param verify: Either a boolean, in which case it controls whether we
             verify the server’s TLS certificate, or a string, in which case it
             must be a path to a CA bundle to use. Defaults to ``True``.
+        :param requests_session: A specific ``requests.Session`` to use,
+            allowing advanced customisation. The caller is responsible for
+            closing the session.
         :param kind: The kind of session to create.
         :param proxy_user: User to impersonate when starting the session.
         :param jars: URLs of jars to be used in this session.
@@ -164,7 +173,7 @@ class LivySession:
         :param check: Whether to raise an exception when a statement in the
             remote session fails. Defaults to ``True``.
         """
-        client = LivyClient(url, auth, verify=verify)
+        client = LivyClient(url, auth, verify, requests_session)
         session = client.create_session(
             kind,
             proxy_user,
@@ -182,7 +191,16 @@ class LivySession:
             spark_conf,
         )
         client.close()
-        return cls(url, session.session_id, auth, verify, kind, echo, check)
+        return cls(
+            url,
+            session.session_id,
+            auth,
+            verify,
+            requests_session,
+            kind,
+            echo,
+            check,
+        )
 
     def __enter__(self) -> "LivySession":
         self.wait()

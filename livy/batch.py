@@ -1,6 +1,8 @@
 import time
 from typing import Any, Dict, List
 
+import requests
+
 from livy.client import LivyClient, Auth, Verify
 from livy.models import SessionState, SESSION_STATE_FINISHED
 from livy.utils import polling_intervals
@@ -15,6 +17,9 @@ class LivyBatch:
     :param verify: Either a boolean, in which case it controls whether we
         verify the server’s TLS certificate, or a string, in which case it must
         be a path to a CA bundle to use. Defaults to ``True``.
+    :param requests_session: A specific ``requests.Session`` to use, allowing
+        advanced customisation. The caller is responsible for closing the
+        session.
     """
 
     def __init__(
@@ -23,8 +28,9 @@ class LivyBatch:
         batch_id: int,
         auth: Auth = None,
         verify: Verify = True,
+        requests_session: requests.Session = None,
     ) -> None:
-        self.client = LivyClient(url, auth, verify=verify)
+        self.client = LivyClient(url, auth, verify, requests_session)
         self.batch_id = batch_id
 
     @classmethod
@@ -34,6 +40,7 @@ class LivyBatch:
         file: str,
         auth: Auth = None,
         verify: Verify = True,
+        requests_session: requests.Session = None,
         class_name: str = None,
         args: List[str] = None,
         proxy_user: str = None,
@@ -79,6 +86,9 @@ class LivyBatch:
         :param verify: Either a boolean, in which case it controls whether we
             verify the server’s TLS certificate, or a string, in which case it
             must be a path to a CA bundle to use. Defaults to ``True``.
+        :param requests_session: A specific ``requests.Session`` to use,
+            allowing advanced customisation. The caller is responsible for
+            closing the session.
         :param class_name: Application Java/Spark main class.
         :param proxy_user: User to impersonate when starting the session.
         :param jars: URLs of jars to be used in this session.
@@ -96,7 +106,7 @@ class LivyBatch:
         :param name: The name of this session.
         :param spark_conf: Spark configuration properties.
         """
-        client = LivyClient(url, auth, verify=verify)
+        client = LivyClient(url, auth, verify, requests_session)
         batch = client.create_batch(
             file,
             class_name,
@@ -116,7 +126,7 @@ class LivyBatch:
             spark_conf,
         )
         client.close()
-        return cls(url, batch.batch_id, auth, verify)
+        return cls(url, batch.batch_id, auth, verify, requests_session)
 
     def wait(self) -> SessionState:
         """Wait for the batch session to finish."""
