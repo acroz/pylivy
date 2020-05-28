@@ -33,7 +33,7 @@ The :class:`~livy.session.LivySession` class is the main interface provided by
 
     LIVY_URL = 'http://spark.example.com:8998'
 
-    with LivySession(LIVY_URL) as session:
+    with LivySession.create(LIVY_URL) as session:
         # Run some code on the remote cluster
         session.run("filtered = df.filter(df.name == 'Bob')")
         # Retrieve the result
@@ -47,7 +47,7 @@ Authenticate requests sent to Livy by passing `any requests Auth object
 
     auth = HTTPBasicAuth('username', 'password')
 
-    with LivySession(LIVY_URL, auth) as session:
+    with LivySession.create(LIVY_URL, auth) as session:
         session.run("filtered = df.filter(df.name == 'Bob')")
         local_df = session.read('filtered')
 
@@ -58,7 +58,7 @@ Similarly, batch sessions in Livy can be created and managed with the
 
     LIVY_URL = 'http://spark.example.com:8998'
 
-    batch = LivyBatch(
+    batch = LivyBatch.create(
         integration_url,
         file=(
             "https://repo.typesafe.com/typesafe/maven-releases/org/"

@@ -185,33 +185,23 @@ class LivyClient:
                 f"this version (should be one of {valid_kinds})"
             )
 
-        body: Dict[str, Any] = {"kind": kind.value}
-        if proxy_user is not None:
-            body["proxyUser"] = proxy_user
-        if jars is not None:
-            body["jars"] = jars
-        if py_files is not None:
-            body["pyFiles"] = py_files
-        if files is not None:
-            body["files"] = files
-        if driver_memory is not None:
-            body["driverMemory"] = driver_memory
-        if driver_cores is not None:
-            body["driverCores"] = driver_cores
-        if executor_memory is not None:
-            body["executorMemory"] = executor_memory
-        if executor_cores is not None:
-            body["executorCores"] = executor_cores
-        if num_executors is not None:
-            body["numExecutors"] = num_executors
-        if archives is not None:
-            body["archives"] = archives
-        if queue is not None:
-            body["queue"] = queue
-        if name is not None:
-            body["name"] = name
-        if spark_conf is not None:
-            body["conf"] = spark_conf
+        interactive_session_params = {"kind": kind.value}
+        common_params = _new_session_body(
+            proxy_user,
+            jars,
+            py_files,
+            files,
+            driver_memory,
+            driver_cores,
+            executor_memory,
+            executor_cores,
+            num_executors,
+            archives,
+            queue,
+            name,
+            spark_conf,
+        )
+        body = {**interactive_session_params, **common_params}
 
         data = self._client.post("/sessions", data=body)
         return Session.from_json(data)
@@ -342,37 +332,27 @@ class LivyClient:
         :param spark_conf: Spark configuration properties.
         """
 
-        body: Dict[str, Any] = {"file": file}
+        batch_session_params: Dict[str, Any] = {"file": file}
         if class_name is not None:
-            body["className"] = class_name
+            batch_session_params["className"] = class_name
         if args is not None:
-            body["args"] = args
-        if proxy_user is not None:
-            body["proxyUser"] = proxy_user
-        if jars is not None:
-            body["jars"] = jars
-        if py_files is not None:
-            body["pyFiles"] = py_files
-        if files is not None:
-            body["files"] = files
-        if driver_memory is not None:
-            body["driverMemory"] = driver_memory
-        if driver_cores is not None:
-            body["driverCores"] = driver_cores
-        if executor_memory is not None:
-            body["executorMemory"] = executor_memory
-        if executor_cores is not None:
-            body["executorCores"] = executor_cores
-        if num_executors is not None:
-            body["numExecutors"] = num_executors
-        if archives is not None:
-            body["archives"] = archives
-        if queue is not None:
-            body["queue"] = queue
-        if name is not None:
-            body["name"] = name
-        if spark_conf is not None:
-            body["conf"] = spark_conf
+            batch_session_params["args"] = args
+        common_params = _new_session_body(
+            proxy_user,
+            jars,
+            py_files,
+            files,
+            driver_memory,
+            driver_cores,
+            executor_memory,
+            executor_cores,
+            num_executors,
+            archives,
+            queue,
+            name,
+            spark_conf,
+        )
+        body = {**batch_session_params, **common_params}
 
         data = self._client.post("/batches", data=body)
         return Batch.from_json(data)
@@ -425,3 +405,48 @@ class LivyClient:
         """List all the active batches in Livy."""
         response = self._client.get("/batches")
         return [Batch.from_json(data) for data in response["sessions"]]
+
+
+def _new_session_body(
+    proxy_user: Optional[str],
+    jars: Optional[List[str]],
+    py_files: Optional[List[str]],
+    files: Optional[List[str]],
+    driver_memory: Optional[str],
+    driver_cores: Optional[int],
+    executor_memory: Optional[str],
+    executor_cores: Optional[int],
+    num_executors: Optional[int],
+    archives: Optional[List[str]],
+    queue: Optional[str],
+    name: Optional[str],
+    spark_conf: Optional[Dict[str, Any]],
+) -> Dict[str, Any]:
+    body: Dict[str, Any] = {}
+    if proxy_user is not None:
+        body["proxyUser"] = proxy_user
+    if jars is not None:
+        body["jars"] = jars
+    if py_files is not None:
+        body["pyFiles"] = py_files
+    if files is not None:
+        body["files"] = files
+    if driver_memory is not None:
+        body["driverMemory"] = driver_memory
+    if driver_cores is not None:
+        body["driverCores"] = driver_cores
+    if executor_memory is not None:
+        body["executorMemory"] = executor_memory
+    if executor_cores is not None:
+        body["executorCores"] = executor_cores
+    if num_executors is not None:
+        body["numExecutors"] = num_executors
+    if archives is not None:
+        body["archives"] = archives
+    if queue is not None:
+        body["queue"] = queue
+    if name is not None:
+        body["name"] = name
+    if spark_conf is not None:
+        body["conf"] = spark_conf
+    return body

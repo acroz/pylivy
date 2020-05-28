@@ -100,7 +100,7 @@ def test_session(integration_url, capsys, session_kind, params):
 
     assert livy_available(integration_url)
 
-    with LivySession(integration_url, kind=session_kind) as session:
+    with LivySession.create(integration_url, kind=session_kind) as session:
 
         assert session.state == SessionState.IDLE
 
@@ -132,7 +132,7 @@ def test_sql_session(integration_url):
 
     assert livy_available(integration_url)
 
-    with LivySession(integration_url, kind=SessionKind.SQL) as session:
+    with LivySession.create(integration_url, kind=SessionKind.SQL) as session:
 
         assert session.state == SessionState.IDLE
 
@@ -154,7 +154,7 @@ def test_batch_job(integration_url):
 
     assert livy_available(integration_url)
 
-    batch = LivyBatch(
+    batch = LivyBatch.create(
         integration_url,
         file=(
             "https://repo.typesafe.com/typesafe/maven-releases/org/apache/"
@@ -163,9 +163,6 @@ def test_batch_job(integration_url):
         ),
         class_name="org.apache.spark.examples.SparkPi",
     )
-    assert batch.batch_id is None
-
-    batch.start()
 
     assert batch.state == SessionState.RUNNING
 
