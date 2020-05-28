@@ -103,7 +103,6 @@ class LivyClient:
     ) -> None:
         self._client = JsonClient(url, auth, verify, requests_session)
         self._server_version_cache: Optional[Version] = None
-        self.requests_session = requests_session
 
     def close(self) -> None:
         """Close the underlying requests session."""
