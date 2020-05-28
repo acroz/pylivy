@@ -64,6 +64,26 @@ def test_verify(requests_mock, mocker, verify):
     assert request.verify is verify
 
 
+def test_custom_requests_session(mocker):
+    mocker.patch.object(Session, "from_json")
+
+    mock_requests_session = mocker.Mock()
+    mock_response = mocker.Mock()
+    mock_response.json.return_value = {"sessions": []}
+    mock_requests_session.request.return_value = mock_response
+
+    client = LivyClient(
+        "http://example.com", requests_session=mock_requests_session
+    )
+    client.list_sessions()
+
+    mock_requests_session.request.assert_called_once()
+
+    # Check that a custom session does not get closed
+    client.close()
+    mock_requests_session.close.assert_not_called()
+
+
 def test_list_sessions(requests_mock, mocker):
     requests_mock.get(
         "http://example.com/sessions", json={"sessions": [MOCK_SESSION_JSON]}
