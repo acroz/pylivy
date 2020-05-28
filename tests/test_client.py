@@ -37,6 +37,21 @@ MOCK_BATCH_ID = 2398
 MOCK_BATCH_LOG_JSON = {"mock": "batch_log"}
 
 
+def test_auth(requests_mock, mocker):
+    requests_mock.get("http://example.com/sessions", json={"sessions": []})
+    mocker.patch.object(Session, "from_json")
+
+    def dummy_auth(request):
+        request.headers["Authorization"] = "dummy-token"
+        return request
+
+    client = LivyClient("http://example.com", auth=dummy_auth)
+    client.list_sessions()
+
+    [request] = requests_mock.request_history
+    assert request.headers["Authorization"] == "dummy-token"
+
+
 @pytest.mark.parametrize("verify", [True, False, "my/ca/bundle"])
 def test_verify(requests_mock, mocker, verify):
     requests_mock.get("http://example.com/sessions", json={"sessions": []})
