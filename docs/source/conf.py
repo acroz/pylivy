@@ -4,7 +4,7 @@
 # -- Project information -----------------------------------------------------
 
 project = "pylivy"
-copyright = "2018, Andrew Crozier"
+copyright = "2018-2020, Andrew Crozier"
 author = "Andrew Crozier"
 
 
