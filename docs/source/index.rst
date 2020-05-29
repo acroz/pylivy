@@ -47,7 +47,7 @@ Similarly, batch sessions in Livy can be created and managed with the
     LIVY_URL = "http://spark.example.com:8998"
 
     batch = LivyBatch.create(
-        integration_url,
+        LIVY_URL,
         file=(
             "https://repo.typesafe.com/typesafe/maven-releases/org/"
             "apache/spark/spark-examples_2.11/1.6.0-typesafe-001/"
