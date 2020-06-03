@@ -112,6 +112,7 @@ class Statement:
     statement_id: int
     state: StatementState
     output: Optional[Output]
+    progress: Optional[float]
 
     @classmethod
     def from_json(cls, session_id: int, data: dict) -> "Statement":
@@ -119,8 +120,11 @@ class Statement:
             output = None
         else:
             output = Output.from_json(data["output"])
+
+        progress = data.get('progress')
+
         return cls(
-            session_id, data["id"], StatementState(data["state"]), output
+            session_id, data["id"], StatementState(data["state"]), output, progress
         )
 
 
