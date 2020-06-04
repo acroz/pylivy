@@ -479,7 +479,8 @@ def _new_session_body(
         body["name"] = name
     if spark_conf is not None:
         body["conf"] = spark_conf
-    # heartbeat_timeout is only supported for interactive sessions, not batch sessions
+    # heartbeat_timeout is only supported for interactive sessions
+    # not for batch sessions
     if heartbeat_timeout is not None:
         body["heartbeatTimeoutInSecond"] = heartbeat_timeout
     return body
