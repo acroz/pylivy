@@ -144,7 +144,7 @@ def test_create_session(requests_mock, mocker):
         "kind": "pyspark",
         "proxyUser": MOCK_PROXY_USER,
         "conf": MOCK_SPARK_CONF,
-        "heartbeatTimeoutInSecond": 500,
+        "heartbeatTimeoutInSecond": MOCK_HEARTBEAT_TIMEOUT,
         "jars": MOCK_JARS,
         "pyFiles": MOCK_PY_FILES,
         "files": MOCK_FILES,
