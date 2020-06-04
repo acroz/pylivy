@@ -159,6 +159,7 @@ class LivyClient:
         queue: str = None,
         name: str = None,
         spark_conf: Dict[str, Any] = None,
+        heartbeat_timeout: Optional[int] = None,
     ) -> Session:
         """Create a new session in Livy.
 
@@ -198,6 +199,8 @@ class LivyClient:
         :param queue: The name of the YARN queue to which submitted.
         :param name: The name of this session.
         :param spark_conf: Spark configuration properties.
+        :param heartbeat_timeout: Optional Timeout in seconds to which session
+            be automatically orphaned if no heartbeat is received.
         """
         if self.legacy_server():
             valid_kinds = VALID_LEGACY_SESSION_KINDS
@@ -225,6 +228,7 @@ class LivyClient:
             queue,
             name,
             spark_conf,
+            heartbeat_timeout,
         )
         body = {**interactive_session_params, **common_params}
 
@@ -376,6 +380,7 @@ class LivyClient:
             queue,
             name,
             spark_conf,
+            heartbeat_timeout=None,
         )
         body = {**batch_session_params, **common_params}
 
@@ -446,6 +451,7 @@ def _new_session_body(
     queue: Optional[str],
     name: Optional[str],
     spark_conf: Optional[Dict[str, Any]],
+    heartbeat_timeout: Optional[int],
 ) -> Dict[str, Any]:
     body: Dict[str, Any] = {}
     if proxy_user is not None:
@@ -474,4 +480,6 @@ def _new_session_body(
         body["name"] = name
     if spark_conf is not None:
         body["conf"] = spark_conf
+    if heartbeat_timeout is not None:
+        body["heartbeatTimeoutInSecond"] = heartbeat_timeout
     return body

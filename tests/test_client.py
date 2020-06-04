@@ -18,6 +18,7 @@ MOCK_STATEMENT_ID = 12
 MOCK_CODE = "mock code"
 MOCK_PROXY_USER = "proxy-user"
 MOCK_SPARK_CONF = {"spark.master": "yarn", "spark.submit.deployMode": "client"}
+MOCK_HEARTBEAT_TIMEOUT = 500
 MOCK_JARS = ["mock1.jar", "mock2.jar"]
 MOCK_PY_FILES = ["mock1.py", "mock2.py"]
 MOCK_FILES = ["mockfile1.txt", "mockfile2.txt"]
@@ -123,6 +124,7 @@ def test_create_session(requests_mock, mocker):
         SessionKind.PYSPARK,
         proxy_user=MOCK_PROXY_USER,
         spark_conf=MOCK_SPARK_CONF,
+        heartbeat_timeout=MOCK_HEARTBEAT_TIMEOUT,
         jars=MOCK_JARS,
         py_files=MOCK_PY_FILES,
         files=MOCK_FILES,
@@ -142,6 +144,7 @@ def test_create_session(requests_mock, mocker):
         "kind": "pyspark",
         "proxyUser": MOCK_PROXY_USER,
         "conf": MOCK_SPARK_CONF,
+        "heartbeatTimeoutInSecond": 500,
         "jars": MOCK_JARS,
         "pyFiles": MOCK_PY_FILES,
         "files": MOCK_FILES,
