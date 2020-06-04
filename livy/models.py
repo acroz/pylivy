@@ -121,10 +121,12 @@ class Statement:
         else:
             output = Output.from_json(data["output"])
 
-        progress = data.get('progress')
-
         return cls(
-            session_id, data["id"], StatementState(data["state"]), output, progress
+            session_id,
+            data["id"],
+            StatementState(data["state"]),
+            output,
+            data.get("progress"),
         )
 
 
