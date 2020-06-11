@@ -214,6 +214,10 @@ class LivyClient:
             )
 
         interactive_session_params = {"kind": kind.value}
+        if heartbeat_timeout is not None:
+            interactive_session_params[
+                "heartbeatTimeoutInSecond"
+            ] = heartbeat_timeout
         common_params = _new_session_body(
             proxy_user,
             jars,
@@ -228,7 +232,6 @@ class LivyClient:
             queue,
             name,
             spark_conf,
-            heartbeat_timeout,
         )
         body = {**interactive_session_params, **common_params}
 
@@ -450,7 +453,6 @@ def _new_session_body(
     queue: Optional[str],
     name: Optional[str],
     spark_conf: Optional[Dict[str, Any]],
-    heartbeat_timeout: Optional[int] = None,
 ) -> Dict[str, Any]:
     body: Dict[str, Any] = {}
     if proxy_user is not None:
@@ -479,8 +481,4 @@ def _new_session_body(
         body["name"] = name
     if spark_conf is not None:
         body["conf"] = spark_conf
-    # heartbeat_timeout is only supported for interactive sessions
-    # not for batch sessions
-    if heartbeat_timeout is not None:
-        body["heartbeatTimeoutInSecond"] = heartbeat_timeout
     return body
