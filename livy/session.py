@@ -1,6 +1,6 @@
 import time
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import requests
 import pandas
@@ -118,7 +118,7 @@ class LivySession:
         queue: str = None,
         name: str = None,
         spark_conf: Dict[str, Any] = None,
-        heartbeat_timeout: Optional[int] = None,
+        heartbeat_timeout: int = None,
         echo: bool = True,
         check: bool = True,
     ) -> "LivySession":

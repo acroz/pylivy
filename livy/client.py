@@ -159,7 +159,7 @@ class LivyClient:
         queue: str = None,
         name: str = None,
         spark_conf: Dict[str, Any] = None,
-        heartbeat_timeout: Optional[int] = None,
+        heartbeat_timeout: int = None,
     ) -> Session:
         """Create a new session in Livy.
 
