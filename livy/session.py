@@ -118,6 +118,7 @@ class LivySession:
         queue: str = None,
         name: str = None,
         spark_conf: Dict[str, Any] = None,
+        heartbeat_timeout: int = None,
         echo: bool = True,
         check: bool = True,
     ) -> "LivySession":
@@ -168,6 +169,8 @@ class LivySession:
         :param queue: The name of the YARN queue to which submitted.
         :param name: The name of this session.
         :param spark_conf: Spark configuration properties.
+        :param heartbeat_timeout: Optional Timeout in seconds to which session
+            be automatically orphaned if no heartbeat is received.
         :param echo: Whether to echo output printed in the remote session.
             Defaults to ``True``.
         :param check: Whether to raise an exception when a statement in the
@@ -189,6 +192,7 @@ class LivySession:
             queue,
             name,
             spark_conf,
+            heartbeat_timeout,
         )
         client.close()
         return cls(

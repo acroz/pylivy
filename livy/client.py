@@ -159,6 +159,7 @@ class LivyClient:
         queue: str = None,
         name: str = None,
         spark_conf: Dict[str, Any] = None,
+        heartbeat_timeout: int = None,
     ) -> Session:
         """Create a new session in Livy.
 
@@ -198,6 +199,8 @@ class LivyClient:
         :param queue: The name of the YARN queue to which submitted.
         :param name: The name of this session.
         :param spark_conf: Spark configuration properties.
+        :param heartbeat_timeout: Optional Timeout in seconds to which session
+            be automatically orphaned if no heartbeat is received.
         """
         if self.legacy_server():
             valid_kinds = VALID_LEGACY_SESSION_KINDS
@@ -211,6 +214,10 @@ class LivyClient:
             )
 
         interactive_session_params = {"kind": kind.value}
+        if heartbeat_timeout is not None:
+            interactive_session_params[
+                "heartbeatTimeoutInSecond"
+            ] = heartbeat_timeout
         common_params = _new_session_body(
             proxy_user,
             jars,
