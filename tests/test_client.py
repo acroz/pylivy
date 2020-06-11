@@ -123,8 +123,6 @@ def test_create_session(requests_mock, mocker):
     session = client.create_session(
         SessionKind.PYSPARK,
         proxy_user=MOCK_PROXY_USER,
-        spark_conf=MOCK_SPARK_CONF,
-        heartbeat_timeout=MOCK_HEARTBEAT_TIMEOUT,
         jars=MOCK_JARS,
         py_files=MOCK_PY_FILES,
         files=MOCK_FILES,
@@ -136,6 +134,8 @@ def test_create_session(requests_mock, mocker):
         archives=MOCK_ARCHIVES,
         queue=MOCK_QUEUE,
         name=MOCK_NAME,
+        spark_conf=MOCK_SPARK_CONF,
+        heartbeat_timeout=MOCK_HEARTBEAT_TIMEOUT,
     )
 
     assert session == Session.from_json.return_value
