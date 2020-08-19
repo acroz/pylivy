@@ -67,7 +67,7 @@ class JsonClient:
             self.session.close()
 
     def get(self, endpoint: str = "", params: dict = None) -> dict:
-        return self._request("GET", endpoint)
+        return self._request("GET", endpoint, params=params)
 
     def post(self, endpoint: str, data: dict = None) -> dict:
         return self._request("POST", endpoint, data)
