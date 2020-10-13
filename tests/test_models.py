@@ -61,6 +61,7 @@ def test_statement_from_json_no_output():
     statement_json = {
         "id": 10,
         "state": "running",
+        "code": "dummy code",
         "output": None,
         "progress": 0.0,
     }
@@ -69,6 +70,7 @@ def test_statement_from_json_no_output():
         session_id,
         statement_id=10,
         state=StatementState.RUNNING,
+        code="dummy code",
         output=None,
         progress=0.0,
     )
@@ -84,6 +86,7 @@ def test_statement_from_json_with_output(mocker):
     statement_json = {
         "id": 10,
         "state": "running",
+        "code": "dummy code",
         "output": "dummy output",
         "progress": 0.5,
     }
@@ -92,6 +95,7 @@ def test_statement_from_json_with_output(mocker):
         session_id,
         statement_id=10,
         state=StatementState.RUNNING,
+        code="dummy code",
         output=Output.from_json.return_value,
         progress=0.5,
     )
@@ -108,6 +112,7 @@ def test_statement_from_json_no_progress(mocker):
     statement_json = {
         "id": 10,
         "state": "running",
+        "code": "dummy code",
         "output": "dummy output",
         "progress": None,
     }
@@ -116,6 +121,7 @@ def test_statement_from_json_no_progress(mocker):
         session_id,
         statement_id=10,
         state=StatementState.RUNNING,
+        code="dummy code",
         output=Output.from_json.return_value,
         progress=None,
     )
@@ -131,6 +137,7 @@ def test_statement_from_json_with_progress(mocker):
     statement_json = {
         "id": 10,
         "state": "running",
+        "code": "dummy code",
         "output": "dummy output",
         "progress": 0.5,
     }
@@ -139,6 +146,7 @@ def test_statement_from_json_with_progress(mocker):
         session_id,
         statement_id=10,
         state=StatementState.RUNNING,
+        code="dummy code",
         output=Output.from_json.return_value,
         progress=0.5,
     )
