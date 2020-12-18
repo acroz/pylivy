@@ -54,12 +54,12 @@ then run:
 
 .. code-block:: bash
 
-    tox -e py37
+    tox -e py
 
 ``tox`` will build the project into a package, prepare a Python virtual
 environment with additional test dependencies, and execute the tests. You can
-also run tests against Python 3.6 by replacing ``py37`` with ``py36`` in the
-above command.
+also specify the version of Python to test against by specifying ``py36``,
+``py37`` etc. instead of ``py`` in the above command.
 
 To run integration tests, you need to first start a Livy server to test
 against. For this purpose, I've prepared a Docker image that runs a basic Livy
@@ -73,10 +73,10 @@ Then, in a separate shell, run the integration tests:
 
 .. code-block:: bash
 
-    tox -e py37-integration
+    tox -e py-integration
 
-Again, you can replace ``py37`` with ``py36`` to change the Python version
-used.
+Again, specify the version of Python to test against by specifying ``py36``,
+``py37`` etc. instead of ``py``.
 
 Adding tests
 ++++++++++++
