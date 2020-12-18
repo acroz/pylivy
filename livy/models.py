@@ -111,6 +111,7 @@ class Statement:
     session_id: int
     statement_id: int
     state: StatementState
+    code: str
     output: Optional[Output]
     progress: Optional[float]
 
@@ -125,6 +126,7 @@ class Statement:
             session_id,
             data["id"],
             StatementState(data["state"]),
+            data["code"],
             output,
             data.get("progress"),
         )
