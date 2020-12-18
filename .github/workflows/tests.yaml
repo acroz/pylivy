@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [3.6, 3.7, 3.8]
+        python: [3.6, 3.7, 3.8, 3.9]
     steps:
       - name: Check out code
         uses: actions/checkout@v2
@@ -38,7 +38,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Install Tox
         run: pip install tox
       - name: Run linter
@@ -58,8 +58,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Install Tox
         run: pip install tox
       - name: Run tests
-        run: tox -e py38-integration
+        run: tox -e py39-integration

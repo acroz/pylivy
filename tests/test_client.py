@@ -280,7 +280,8 @@ def test_create_batch(requests_mock, mocker):
 
 def test_get_batch(requests_mock, mocker):
     requests_mock.get(
-        f"http://example.com/batches/{MOCK_BATCH_ID}", json=MOCK_BATCH_JSON,
+        f"http://example.com/batches/{MOCK_BATCH_ID}",
+        json=MOCK_BATCH_JSON,
     )
     mocker.patch.object(Batch, "from_json")
 
