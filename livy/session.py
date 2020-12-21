@@ -26,7 +26,7 @@ cat(unlist(collect(toJSON({}))), sep = '\n')
 """
 
 
-def serialise_dataframe_code(
+def _spark_serialise_dataframe_code(
     dataframe_name: str, session_kind: SessionKind
 ) -> str:
     try:
@@ -43,7 +43,7 @@ def serialise_dataframe_code(
     return template.format(dataframe_name)
 
 
-def deserialise_dataframe(text: str) -> pandas.DataFrame:
+def _deserialise_dataframe(text: str) -> pandas.DataFrame:
     rows = []
     for line in text.split("\n"):
         if line:
@@ -51,7 +51,7 @@ def deserialise_dataframe(text: str) -> pandas.DataFrame:
     return pandas.DataFrame.from_records(rows)
 
 
-def dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
+def _dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     try:
         fields = json_output["schema"]["fields"]
         columns = [field["name"] for field in fields]
@@ -249,12 +249,12 @@ class LivySession:
 
         :param dataframe_name: The name of the Spark dataframe to read.
         """
-        code = serialise_dataframe_code(dataframe_name, self.kind)
+        code = _spark_serialise_dataframe_code(dataframe_name, self.kind)
         output = self._execute(code)
         output.raise_for_status()
         if output.text is None:
             raise RuntimeError("statement had no text output")
-        return deserialise_dataframe(output.text)
+        return _deserialise_dataframe(output.text)
 
     def read_sql(self, code: str) -> pandas.DataFrame:
         """Evaluate a Spark SQL satatement and retrieve the result.
@@ -267,7 +267,7 @@ class LivySession:
         output.raise_for_status()
         if output.json is None:
             raise RuntimeError("statement had no JSON output")
-        return dataframe_from_json_output(output.json)
+        return _dataframe_from_json_output(output.json)
 
     def _execute(self, code: str) -> Output:
         statement = self.client.create_statement(self.session_id, code)
