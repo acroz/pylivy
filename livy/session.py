@@ -27,7 +27,7 @@ cat(unlist(collect(toJSON({}))), sep = '\n')
 
 
 def _spark_serialise_dataframe_code(
-    dataframe_name: str, session_kind: SessionKind
+    spark_dataframe_name: str, session_kind: SessionKind
 ) -> str:
     try:
         template = {
@@ -40,7 +40,7 @@ def _spark_serialise_dataframe_code(
         raise RuntimeError(
             f"read not supported for sessions of kind {session_kind}"
         )
-    return template.format(dataframe_name)
+    return template.format(spark_dataframe_name)
 
 
 def _deserialise_dataframe(text: str) -> pandas.DataFrame:
@@ -59,6 +59,55 @@ def _dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     except KeyError:
         raise ValueError("json output does not match expected structure")
     return pandas.DataFrame(data, columns=columns)
+
+
+CREATE_DATAFRAME_TEMPLATE_SPARK = """
+val {} = spark.read.json(spark.sparkContext.parallelize(List({})))
+"""
+CREATE_DATAFRAME_TEMPLATE_PYSPARK = """
+{} = spark.read.json(spark.sparkContext.parallelize([{}]))
+"""
+CREATE_DATAFRAME_TEMPLATE_SPARKR = """
+_livy_client_temp_filename <- tempfile(fileext=".jsonl")
+_livy_client_temp_file <- file(_livy_client_temp_filename)
+writeLines('{1}', _livy_client_temp_file)
+close(_livy_client_temp_file)
+{0} <- read.json(_livy_client_temp_filename)
+{0}.persist()
+file.remove(_livy_client_temp_filename)
+"""
+
+
+def _spark_create_dataframe_code(
+    session_kind: SessionKind,
+    spark_dataframe_name: str,
+    dataframe: pandas.DataFrame,
+) -> str:
+
+    df_as_json = dataframe.to_json(orient="records", lines=True)
+
+    if session_kind == SessionKind.SPARK:
+        list_content = ", ".join(
+            f'"""{row}"""' for row in df_as_json.split("\n")
+        )
+        code = CREATE_DATAFRAME_TEMPLATE_SPARK.format(
+            spark_dataframe_name, list_content
+        )
+    elif session_kind in {SessionKind.PYSPARK, SessionKind.PYSPARK3}:
+        list_content = ", ".join(repr(row) for row in df_as_json.split("\n"))
+        code = CREATE_DATAFRAME_TEMPLATE_PYSPARK.format(
+            spark_dataframe_name, list_content
+        )
+    elif session_kind == SessionKind.SPARKR:
+        code = CREATE_DATAFRAME_TEMPLATE_SPARKR.format(
+            spark_dataframe_name, df_as_json
+        )
+    else:
+        raise RuntimeError(
+            f"write not supported for sessions of kind {session_kind}"
+        )
+
+    return code
 
 
 class LivySession:
