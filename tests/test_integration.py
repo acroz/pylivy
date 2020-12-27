@@ -70,7 +70,7 @@ SPARKR_TEST_PARAMETERS = Parameters(
 )
 
 SQL_CREATE_VIEW = """
-CREATE TEMPORARY VIEW view AS SELECT * FROM RANGE(100)
+CREATE TEMPORARY VIEW view AS SELECT id AS value FROM RANGE(100)
 """
 
 
@@ -124,8 +124,9 @@ def test_sql_session(integration_url):
         with pytest.raises(SparkRuntimeError):
             session.run("not valid SQL!")
 
-        expected = pandas.DataFrame({"id": range(100)})
-        assert session.read_sql("SELECT * FROM view").equals(expected)
+        assert session.read_sql("SELECT * FROM view").equals(
+            RANGE_EXPECTED_DATAFRAME
+        )
 
     assert _session_stopped(integration_url, session.session_id)
 
