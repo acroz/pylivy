@@ -68,13 +68,14 @@ CREATE_DATAFRAME_TEMPLATE_PYSPARK = """
 {} = spark.read.json(spark.sparkContext.parallelize([{}]))
 """
 CREATE_DATAFRAME_TEMPLATE_SPARKR = """
-_livy_client_temp_filename <- tempfile(fileext=".jsonl")
-_livy_client_temp_file <- file(_livy_client_temp_filename)
-writeLines('{1}', _livy_client_temp_file)
-close(_livy_client_temp_file)
-{0} <- read.json(_livy_client_temp_filename)
-{0}.persist()
-file.remove(_livy_client_temp_filename)
+livy_client_temp_filename <- tempfile(fileext=".jsonl")
+livy_client_temp_file <- file(livy_client_temp_filename)
+writeLines('{1}', livy_client_temp_file)
+close(livy_client_temp_file)
+{0} <- read.json(livy_client_temp_filename)
+persist({0}, "MEMORY_AND_DISK")
+count({0})  # Force loading the data
+file.remove(livy_client_temp_filename)
 """
 
 
