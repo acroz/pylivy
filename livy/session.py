@@ -319,6 +319,16 @@ class LivySession:
             raise RuntimeError("statement had no JSON output")
         return _dataframe_from_json_output(output.json)
 
+    def write(self, dataframe_name: str, data: pandas.DataFrame) -> None:
+        """Upload a pandas dataframe to a Spark dataframe in the session.
+
+        :param dataframe_name: The name of the Spark dataframe to create.
+        :param data: The pandas dataframe to upload.
+        """
+        code = _spark_create_dataframe_code(self.kind, dataframe_name, data)
+        output = self._execute(code)
+        output.raise_for_status()
+
     def _execute(self, code: str) -> Output:
         statement = self.client.create_statement(self.session_id, code)
         intervals = polling_intervals([0.1, 0.2, 0.3, 0.5], 1.0)
