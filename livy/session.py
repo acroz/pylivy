@@ -1,5 +1,6 @@
 import time
 import json
+import warnings
 from typing import Any, Dict, List
 
 import requests
@@ -105,7 +106,7 @@ def _spark_create_dataframe_code(
         )
     else:
         raise RuntimeError(
-            f"write not supported for sessions of kind {session_kind}"
+            f"upload not supported for sessions of kind {session_kind}"
         )
 
     return code
@@ -294,10 +295,10 @@ class LivySession:
             output.raise_for_status()
         return output
 
-    def read(self, dataframe_name: str) -> pandas.DataFrame:
-        """Evaluate and retrieve a Spark dataframe in the managed session.
+    def download(self, dataframe_name: str) -> pandas.DataFrame:
+        """Evaluate and download a Spark dataframe from the managed session.
 
-        :param dataframe_name: The name of the Spark dataframe to read.
+        :param dataframe_name: The name of the Spark dataframe to download.
         """
         code = _spark_serialise_dataframe_code(dataframe_name, self.kind)
         output = self._execute(code)
@@ -306,20 +307,50 @@ class LivySession:
             raise RuntimeError("statement had no text output")
         return _deserialise_dataframe(output.text)
 
-    def read_sql(self, code: str) -> pandas.DataFrame:
-        """Evaluate a Spark SQL satatement and retrieve the result.
+    def read(self, dataframe_name: str) -> pandas.DataFrame:
+        """Evaluate and retrieve a Spark dataframe in the managed session.
 
-        :param code: The Spark SQL statement to evaluate.
+        :param dataframe_name: The name of the Spark dataframe to read.
+
+        .. deprecated:: 0.8.0
+            Use :meth:`download` instead.
+        """
+        warnings.warn(
+            "LivySession.read is deprecated and will be removed in a future "
+            "version. Use LivySession.download instead.",
+            DeprecationWarning,
+        )
+        return self.download(dataframe_name)
+
+    def download_sql(self, query: str) -> pandas.DataFrame:
+        """Evaluate a Spark SQL query and download the result.
+
+        :param query: The Spark SQL query to evaluate.
         """
         if self.kind != SessionKind.SQL:
             raise ValueError("not a SQL session")
-        output = self._execute(code)
+        output = self._execute(query)
         output.raise_for_status()
         if output.json is None:
             raise RuntimeError("statement had no JSON output")
         return _dataframe_from_json_output(output.json)
 
-    def write(self, dataframe_name: str, data: pandas.DataFrame) -> None:
+    def read_sql(self, code: str) -> pandas.DataFrame:
+        """Evaluate a Spark SQL statement and retrieve the result.
+
+        :param code: The Spark SQL statement to evaluate.
+
+        .. deprecated:: 0.8.0
+            Use :meth:`download_sql` instead.
+        """
+        warnings.warn(
+            "LivySession.read_sql is deprecated and will be removed in a "
+            "future version. Use LivySession.download_sql instead.",
+            DeprecationWarning,
+        )
+        return self.download_sql(code)
+
+    def upload(self, dataframe_name: str, data: pandas.DataFrame) -> None:
         """Upload a pandas dataframe to a Spark dataframe in the session.
 
         :param dataframe_name: The name of the Spark dataframe to create.
