@@ -115,11 +115,11 @@ def test_session(integration_url, capsys, session_kind, params):
         with pytest.raises(SparkRuntimeError):
             session.run(params.error_code)
 
-        assert session.read("df").equals(RANGE_DATAFRAME)
+        assert session.download("df").equals(RANGE_DATAFRAME)
 
-        session.write("uploaded", RANGE_DATAFRAME)
+        session.upload("uploaded", RANGE_DATAFRAME)
         session.run(params.dataframe_multiply_code)
-        assert session.read("multiplied").equals(RANGE_DATAFRAME * 2)
+        assert session.download("multiplied").equals(RANGE_DATAFRAME * 2)
 
     assert _session_stopped(integration_url, session.session_id)
 
@@ -140,7 +140,9 @@ def test_sql_session(integration_url):
         with pytest.raises(SparkRuntimeError):
             session.run("not valid SQL!")
 
-        assert session.read_sql("SELECT * FROM view").equals(RANGE_DATAFRAME)
+        assert session.download_sql("SELECT * FROM view").equals(
+            RANGE_DATAFRAME
+        )
 
     assert _session_stopped(integration_url, session.session_id)
 

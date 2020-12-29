@@ -37,7 +37,7 @@ The :class:`~livy.session.LivySession` class is the main interface provided by
         # Run some code on the remote cluster
         session.run("filtered = df.filter(df.name == 'Bob')")
         # Retrieve the result
-        local_df = session.read("filtered")
+        local_df = session.download("filtered")
 
 Similarly, batch sessions in Livy can be created and managed with the
 :class:`~livy.batch.LivyBatch` class::
@@ -76,7 +76,7 @@ do::
 
     with LivySession.create(LIVY_URL, auth) as session:
         session.run("filtered = df.filter(df.name == 'Bob')")
-        local_df = session.read("filtered")
+        local_df = session.download("filtered")
 
 Custom requests session
 -----------------------
