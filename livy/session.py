@@ -62,14 +62,14 @@ def _dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     return pandas.DataFrame(data, columns=columns)
 
 
-CREATE_DATAFRAME_TEMPLATE_SPARK = """
-val {} = spark.read.json(spark.sparkContext.parallelize(List({})))
-"""
+CREATE_DATAFRAME_TEMPLATE_SPARK = '''
+val {} = spark.read.json(spark.sparkContext.parallelize(List("""{}""")))
+'''
 CREATE_DATAFRAME_TEMPLATE_PYSPARK = """
 {} = spark.read.json(spark.sparkContext.parallelize([{}]))
 """
 CREATE_DATAFRAME_TEMPLATE_SPARKR = """
-livy_client_temp_filename <- tempfile(fileext=".jsonl")
+livy_client_temp_filename <- tempfile(fileext=".json")
 livy_client_temp_file <- file(livy_client_temp_filename)
 writeLines('{1}', livy_client_temp_file)
 close(livy_client_temp_file)
@@ -86,19 +86,15 @@ def _spark_create_dataframe_code(
     dataframe: pandas.DataFrame,
 ) -> str:
 
-    df_as_json = dataframe.to_json(orient="records", lines=True)
+    df_as_json = dataframe.to_json(orient="records")
 
     if session_kind == SessionKind.SPARK:
-        list_content = ", ".join(
-            f'"""{row}"""' for row in df_as_json.split("\n")
-        )
         code = CREATE_DATAFRAME_TEMPLATE_SPARK.format(
-            spark_dataframe_name, list_content
+            spark_dataframe_name, df_as_json
         )
     elif session_kind in {SessionKind.PYSPARK, SessionKind.PYSPARK3}:
-        list_content = ", ".join(repr(row) for row in df_as_json.split("\n"))
         code = CREATE_DATAFRAME_TEMPLATE_PYSPARK.format(
-            spark_dataframe_name, list_content
+            spark_dataframe_name, repr(df_as_json)
         )
     elif session_kind == SessionKind.SPARKR:
         code = CREATE_DATAFRAME_TEMPLATE_SPARKR.format(
