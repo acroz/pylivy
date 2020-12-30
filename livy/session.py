@@ -39,7 +39,7 @@ def _spark_serialise_dataframe_code(
         }[session_kind]
     except KeyError:
         raise RuntimeError(
-            f"read not supported for sessions of kind {session_kind}"
+            f"upload not supported for sessions of kind {session_kind}"
         )
     return template.format(spark_dataframe_name)
 
