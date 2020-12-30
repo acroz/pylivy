@@ -62,16 +62,16 @@ def _dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     return pandas.DataFrame(data, columns=columns)
 
 
-CREATE_DATAFRAME_TEMPLATE_SPARK = '''
-val {} = spark.read.json(spark.sparkContext.parallelize(List("""{}""")))
-'''
+CREATE_DATAFRAME_TEMPLATE_SPARK = """
+val {} = spark.read.json(spark.sparkContext.parallelize(List({})))
+"""
 CREATE_DATAFRAME_TEMPLATE_PYSPARK = """
 {} = spark.read.json(spark.sparkContext.parallelize([{}]))
 """
 CREATE_DATAFRAME_TEMPLATE_SPARKR = """
 livy_client_temp_filename <- tempfile(fileext=".json")
 livy_client_temp_file <- file(livy_client_temp_filename)
-writeLines('{1}', livy_client_temp_file)
+writeLines({1}, livy_client_temp_file)
 close(livy_client_temp_file)
 {0} <- read.json(livy_client_temp_filename)
 persist({0}, "MEMORY_AND_DISK")
@@ -86,26 +86,27 @@ def _spark_create_dataframe_code(
     dataframe: pandas.DataFrame,
 ) -> str:
 
-    df_as_json = dataframe.to_json(orient="records")
-
-    if session_kind == SessionKind.SPARK:
-        code = CREATE_DATAFRAME_TEMPLATE_SPARK.format(
-            spark_dataframe_name, df_as_json
-        )
-    elif session_kind in {SessionKind.PYSPARK, SessionKind.PYSPARK3}:
-        code = CREATE_DATAFRAME_TEMPLATE_PYSPARK.format(
-            spark_dataframe_name, repr(df_as_json)
-        )
-    elif session_kind == SessionKind.SPARKR:
-        code = CREATE_DATAFRAME_TEMPLATE_SPARKR.format(
-            spark_dataframe_name, df_as_json
-        )
-    else:
+    try:
+        template = {
+            SessionKind.SPARK: CREATE_DATAFRAME_TEMPLATE_SPARK,
+            SessionKind.PYSPARK: CREATE_DATAFRAME_TEMPLATE_PYSPARK,
+            SessionKind.PYSPARK3: CREATE_DATAFRAME_TEMPLATE_PYSPARK,
+            SessionKind.SPARKR: CREATE_DATAFRAME_TEMPLATE_SPARKR,
+        }[session_kind]
+    except KeyError:
         raise RuntimeError(
             f"upload not supported for sessions of kind {session_kind}"
         )
 
-    return code
+    df_as_json = dataframe.to_json(orient="records")
+
+    # To make a string literal that works in Scala, Python and R, it needs to
+    # be started/terminated with double quotes
+    # Rather than roll our own repr() equivalent that forces double quotes, use
+    # json.dumps to make a double-quote-terminated repr of the JSON string
+    df_as_json_repr = json.dumps(df_as_json)
+
+    return template.format(spark_dataframe_name, df_as_json_repr)
 
 
 class LivySession:
