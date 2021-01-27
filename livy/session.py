@@ -1,5 +1,6 @@
 import time
 import json
+import warnings
 from typing import Any, Dict, List
 
 import requests
@@ -26,8 +27,8 @@ cat(unlist(collect(toJSON({}))), sep = '\n')
 """
 
 
-def serialise_dataframe_code(
-    dataframe_name: str, session_kind: SessionKind
+def _spark_serialise_dataframe_code(
+    spark_dataframe_name: str, session_kind: SessionKind
 ) -> str:
     try:
         template = {
@@ -38,12 +39,12 @@ def serialise_dataframe_code(
         }[session_kind]
     except KeyError:
         raise RuntimeError(
-            f"read not supported for sessions of kind {session_kind}"
+            f"upload not supported for sessions of kind {session_kind}"
         )
-    return template.format(dataframe_name)
+    return template.format(spark_dataframe_name)
 
 
-def deserialise_dataframe(text: str) -> pandas.DataFrame:
+def _deserialise_dataframe(text: str) -> pandas.DataFrame:
     rows = []
     for line in text.split("\n"):
         if line:
@@ -51,7 +52,7 @@ def deserialise_dataframe(text: str) -> pandas.DataFrame:
     return pandas.DataFrame.from_records(rows)
 
 
-def dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
+def _dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     try:
         fields = json_output["schema"]["fields"]
         columns = [field["name"] for field in fields]
@@ -59,6 +60,53 @@ def dataframe_from_json_output(json_output: dict) -> pandas.DataFrame:
     except KeyError:
         raise ValueError("json output does not match expected structure")
     return pandas.DataFrame(data, columns=columns)
+
+
+CREATE_DATAFRAME_TEMPLATE_SPARK = """
+val {} = spark.read.json(spark.sparkContext.parallelize(List({})))
+"""
+CREATE_DATAFRAME_TEMPLATE_PYSPARK = """
+{} = spark.read.json(spark.sparkContext.parallelize([{}]))
+"""
+CREATE_DATAFRAME_TEMPLATE_SPARKR = """
+livy_client_temp_filename <- tempfile(fileext=".json")
+livy_client_temp_file <- file(livy_client_temp_filename)
+writeLines({1}, livy_client_temp_file)
+close(livy_client_temp_file)
+{0} <- read.json(livy_client_temp_filename)
+persist({0}, "MEMORY_AND_DISK")
+count({0})  # Force loading the data
+file.remove(livy_client_temp_filename)
+"""
+
+
+def _spark_create_dataframe_code(
+    session_kind: SessionKind,
+    spark_dataframe_name: str,
+    dataframe: pandas.DataFrame,
+) -> str:
+
+    try:
+        template = {
+            SessionKind.SPARK: CREATE_DATAFRAME_TEMPLATE_SPARK,
+            SessionKind.PYSPARK: CREATE_DATAFRAME_TEMPLATE_PYSPARK,
+            SessionKind.PYSPARK3: CREATE_DATAFRAME_TEMPLATE_PYSPARK,
+            SessionKind.SPARKR: CREATE_DATAFRAME_TEMPLATE_SPARKR,
+        }[session_kind]
+    except KeyError:
+        raise RuntimeError(
+            f"upload not supported for sessions of kind {session_kind}"
+        )
+
+    df_as_json = dataframe.to_json(orient="records")
+
+    # To make a string literal that works in Scala, Python and R, it needs to
+    # be started/terminated with double quotes
+    # Rather than roll our own repr() equivalent that forces double quotes, use
+    # json.dumps to make a double-quote-terminated repr of the JSON string
+    df_as_json_repr = json.dumps(df_as_json)
+
+    return template.format(spark_dataframe_name, df_as_json_repr)
 
 
 class LivySession:
@@ -244,30 +292,70 @@ class LivySession:
             output.raise_for_status()
         return output
 
-    def read(self, dataframe_name: str) -> pandas.DataFrame:
-        """Evaluate and retrieve a Spark dataframe in the managed session.
+    def download(self, dataframe_name: str) -> pandas.DataFrame:
+        """Evaluate and download a Spark dataframe from the managed session.
 
-        :param dataframe_name: The name of the Spark dataframe to read.
+        :param dataframe_name: The name of the Spark dataframe to download.
         """
-        code = serialise_dataframe_code(dataframe_name, self.kind)
+        code = _spark_serialise_dataframe_code(dataframe_name, self.kind)
         output = self._execute(code)
         output.raise_for_status()
         if output.text is None:
             raise RuntimeError("statement had no text output")
-        return deserialise_dataframe(output.text)
+        return _deserialise_dataframe(output.text)
 
-    def read_sql(self, code: str) -> pandas.DataFrame:
-        """Evaluate a Spark SQL satatement and retrieve the result.
+    def read(self, dataframe_name: str) -> pandas.DataFrame:
+        """Evaluate and retrieve a Spark dataframe in the managed session.
 
-        :param code: The Spark SQL statement to evaluate.
+        :param dataframe_name: The name of the Spark dataframe to read.
+
+        .. deprecated:: 0.8.0
+            Use :meth:`download` instead.
+        """
+        warnings.warn(
+            "LivySession.read is deprecated and will be removed in a future "
+            "version. Use LivySession.download instead.",
+            DeprecationWarning,
+        )
+        return self.download(dataframe_name)
+
+    def download_sql(self, query: str) -> pandas.DataFrame:
+        """Evaluate a Spark SQL query and download the result.
+
+        :param query: The Spark SQL query to evaluate.
         """
         if self.kind != SessionKind.SQL:
             raise ValueError("not a SQL session")
-        output = self._execute(code)
+        output = self._execute(query)
         output.raise_for_status()
         if output.json is None:
             raise RuntimeError("statement had no JSON output")
-        return dataframe_from_json_output(output.json)
+        return _dataframe_from_json_output(output.json)
+
+    def read_sql(self, code: str) -> pandas.DataFrame:
+        """Evaluate a Spark SQL statement and retrieve the result.
+
+        :param code: The Spark SQL statement to evaluate.
+
+        .. deprecated:: 0.8.0
+            Use :meth:`download_sql` instead.
+        """
+        warnings.warn(
+            "LivySession.read_sql is deprecated and will be removed in a "
+            "future version. Use LivySession.download_sql instead.",
+            DeprecationWarning,
+        )
+        return self.download_sql(code)
+
+    def upload(self, dataframe_name: str, data: pandas.DataFrame) -> None:
+        """Upload a pandas dataframe to a Spark dataframe in the session.
+
+        :param dataframe_name: The name of the Spark dataframe to create.
+        :param data: The pandas dataframe to upload.
+        """
+        code = _spark_create_dataframe_code(self.kind, dataframe_name, data)
+        output = self._execute(code)
+        output.raise_for_status()
 
     def _execute(self, code: str) -> Output:
         statement = self.client.create_statement(self.session_id, code)

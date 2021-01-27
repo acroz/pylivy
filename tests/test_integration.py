@@ -21,10 +21,29 @@ class Parameters:
     dataframe_count_code: str
     dataframe_count_output: str
     error_code: str
+    dataframe_multiply_code: str
+    dataframe_trim_code: str
 
 
-RANGE_EXPECTED_DATAFRAME = pandas.DataFrame({"value": range(100)})
-
+RANGE_DATAFRAME = pandas.DataFrame({"value": range(100)})
+SPECIAL_CHARACTER_EXAMPLES = [
+    # Single and double quotes can terminate string literals in Scala/Python/R
+    "'",
+    '"',
+    # Triple double quotes can terminate multiline strings in Scala - check
+    # also triple single quotes for completeness
+    "'''",
+    '"""',
+    # Various types of brackets, including [] and {} which have meaning in JSON
+    " [](){} ",
+    # Some special characters that require escape sequences or unicode
+    "\u03bb\U0001f914\n\r\t\\",
+    # Some other common special characters
+    "!@£$%^&*",
+]
+TEXT_DATAFRAME = pandas.DataFrame(
+    {"text": [" foo ", " bar"] + SPECIAL_CHARACTER_EXAMPLES}
+)
 
 SPARK_CREATE_RANGE_DATAFRAME = """
 import org.apache.spark.sql.Row
@@ -35,6 +54,12 @@ val schema = StructType(List(
 ))
 val df = spark.createDataFrame(rdd.map { i => Row(i) }, schema)
 """
+SPARK_MULTIPLY_DATAFRAME = """
+val multiplied = uploaded.select($"value" * 2 alias "value")
+"""
+SPARK_TRIM_DATAFRAME = """
+val trimmed = text.select(trim($"text") alias "text")
+"""
 SPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='println("foo")',
     print_foo_output="foo\n\n",
@@ -42,11 +67,20 @@ SPARK_TEST_PARAMETERS = Parameters(
     dataframe_count_code="df.count()",
     dataframe_count_output="res1: Long = 100\n\n",
     error_code="1 / 0",
+    dataframe_multiply_code=SPARK_MULTIPLY_DATAFRAME,
+    dataframe_trim_code=SPARK_TRIM_DATAFRAME,
 )
 
 PYSPARK_CREATE_RANGE_DATAFRAME = """
 from pyspark.sql import Row
 df = spark.createDataFrame([Row(value=i) for i in range(100)])
+"""
+PYSPARK_MULTIPLY_DATAFRAME = """
+multiplied = uploaded.select((uploaded.value * 2).alias("value"))
+"""
+PYSPARK_TRIM_DATAFRAME = """
+from pyspark.sql.functions import trim
+trimmed = text.select(trim(text.text).alias("text"))
 """
 PYSPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
@@ -55,10 +89,18 @@ PYSPARK_TEST_PARAMETERS = Parameters(
     dataframe_count_code="df.count()",
     dataframe_count_output="100\n",
     error_code="1 / 0",
+    dataframe_multiply_code=PYSPARK_MULTIPLY_DATAFRAME,
+    dataframe_trim_code=PYSPARK_TRIM_DATAFRAME,
 )
 
 SPARKR_CREATE_RANGE_DATAFRAME = """
 df <- createDataFrame(data.frame(value = 0:99))
+"""
+SPARKR_MULTIPLY_DATAFRAME = """
+multiplied <- select(uploaded, alias(uploaded$value * 2L, "value"))
+"""
+SPARKR_TRIM_DATAFRAME = """
+trimmed <- select(text, alias(trim(text$text), "text"))
 """
 SPARKR_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
@@ -67,6 +109,8 @@ SPARKR_TEST_PARAMETERS = Parameters(
     dataframe_count_code="count(df)",
     dataframe_count_output="[1] 100\n",
     error_code="missing_function()",
+    dataframe_multiply_code=SPARKR_MULTIPLY_DATAFRAME,
+    dataframe_trim_code=SPARKR_TRIM_DATAFRAME,
 )
 
 SQL_CREATE_VIEW = """
@@ -103,7 +147,17 @@ def test_session(integration_url, capsys, session_kind, params):
         with pytest.raises(SparkRuntimeError):
             session.run(params.error_code)
 
-        assert session.read("df").equals(RANGE_EXPECTED_DATAFRAME)
+        assert session.download("df").equals(RANGE_DATAFRAME)
+
+        session.upload("uploaded", RANGE_DATAFRAME)
+        session.run(params.dataframe_multiply_code)
+        assert session.download("multiplied").equals(RANGE_DATAFRAME * 2)
+
+        session.upload("text", TEXT_DATAFRAME)
+        session.run(params.dataframe_trim_code)
+        assert session.download("trimmed").equals(
+            TEXT_DATAFRAME.applymap(lambda s: s.strip())
+        )
 
     assert _session_stopped(integration_url, session.session_id)
 
@@ -124,8 +178,8 @@ def test_sql_session(integration_url):
         with pytest.raises(SparkRuntimeError):
             session.run("not valid SQL!")
 
-        assert session.read_sql("SELECT * FROM view").equals(
-            RANGE_EXPECTED_DATAFRAME
+        assert session.download_sql("SELECT * FROM view").equals(
+            RANGE_DATAFRAME
         )
 
     assert _session_stopped(integration_url, session.session_id)
