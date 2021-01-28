@@ -213,7 +213,7 @@ class LivyClient:
                 f"this version (should be one of {valid_kinds})"
             )
 
-        interactive_session_params = {"kind": kind.value}
+        interactive_session_params: Dict[str, Any] = {"kind": kind.value}
         if heartbeat_timeout is not None:
             interactive_session_params[
                 "heartbeatTimeoutInSecond"
