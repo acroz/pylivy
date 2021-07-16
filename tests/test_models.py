@@ -226,6 +226,9 @@ def test_batch_from_json():
         "appInfo": {"key1": "val1", "key2": "val2"},
         "log": ["log1", "log2"],
         "state": "running",
+        "name": "Application name",
+        "owner": "application_owner",
+        "proxyUser": "application_proxy_user"
     }
 
     expected = Batch(
@@ -233,6 +236,9 @@ def test_batch_from_json():
         app_id="application_000000000000_000001",
         app_info={"key1": "val1", "key2": "val2"},
         log=["log1", "log2"],
+        name="Application name",
+        owner="application_owner",
+        proxyUser="application_proxy_user",
         state=SessionState.RUNNING,
     )
 
@@ -243,6 +249,7 @@ def test_batch_from_json_no_optionals():
     batch_json = {
         "id": 2398,
         "state": "starting",
+        "owner": "application_owner"
     }
 
     expected = Batch(
@@ -250,6 +257,7 @@ def test_batch_from_json_no_optionals():
         app_id=None,
         app_info=None,
         log=[],
+        owner="application_owner",
         state=SessionState.STARTING,
     )
 
