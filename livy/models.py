@@ -190,6 +190,9 @@ class Batch:
     app_id: Optional[str]
     app_info: Optional[dict]
     log: List[str]
+    name: Optional[str]
+    owner: str
+    proxy_user: Optional[str]
     state: SessionState
 
     @classmethod
@@ -199,6 +202,9 @@ class Batch:
             data.get("appId"),
             data.get("appInfo"),
             data.get("log", []),
+            data.get("name"),
+            data.get("owner"),
+            data.get("proxyUser"),
             SessionState(data["state"]),
         )
 
