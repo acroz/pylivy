@@ -62,10 +62,16 @@ def test_session_from_json_with_name():
         "proxyUser": "user",
         "kind": "pyspark",
         "state": "idle",
-        "name": "example_livy_session"
+        "name": "example_livy_session",
     }
 
-    expected = Session(5, "user", SessionKind.PYSPARK, SessionState.IDLE, name="example_livy_session")
+    expected = Session(
+        5,
+        "user",
+        SessionKind.PYSPARK,
+        SessionState.IDLE,
+        name="example_livy_session",
+    )
 
     assert Session.from_json(session_json) == expected
 

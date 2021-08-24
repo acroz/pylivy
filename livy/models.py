@@ -182,7 +182,7 @@ class Session:
             data["proxyUser"],
             SessionKind(data["kind"]),
             SessionState(data["state"]),
-            data.get('name')
+            data.get("name"),
         )
 
 
