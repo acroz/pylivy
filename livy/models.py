@@ -173,6 +173,7 @@ class Session:
     proxy_user: str
     kind: SessionKind
     state: SessionState
+    name: Optional[str] = None
 
     @classmethod
     def from_json(cls, data: dict) -> "Session":
@@ -181,6 +182,7 @@ class Session:
             data["proxyUser"],
             SessionKind(data["kind"]),
             SessionState(data["state"]),
+            data.get('name')
         )
 
 
