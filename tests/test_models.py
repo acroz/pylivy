@@ -55,6 +55,27 @@ def test_session_from_json():
     assert Session.from_json(session_json) == expected
 
 
+def test_session_from_json_with_name():
+
+    session_json = {
+        "id": 5,
+        "proxyUser": "user",
+        "kind": "pyspark",
+        "state": "idle",
+        "name": "example_livy_session",
+    }
+
+    expected = Session(
+        5,
+        "user",
+        SessionKind.PYSPARK,
+        SessionState.IDLE,
+        name="example_livy_session",
+    )
+
+    assert Session.from_json(session_json) == expected
+
+
 def test_statement_from_json_no_output():
 
     session_id = 5
