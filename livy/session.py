@@ -43,12 +43,23 @@ def _spark_serialise_dataframe_code(
         )
     return template.format(spark_dataframe_name)
 
+def _handle_duplication_in_column(ordered_pairs):
+    """Rename duplicate keys."""
+    d = {}
+    for k, v in ordered_pairs:
+        if k in d:
+           k_1 = '{}*'.format(k)
+           d[k_1] = v
+        else:
+           d[k] = v
+    return d
+
 
 def _deserialise_dataframe(text: str) -> pandas.DataFrame:
     rows = []
     for line in text.split("\n"):
         if line:
-            rows.append(json.loads(line))
+            rows.append(json.loads(line, object_pairs_hook=_handle_duplication_in_column))
     return pandas.DataFrame.from_records(rows)
 
 
