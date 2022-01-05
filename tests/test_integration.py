@@ -166,6 +166,7 @@ def test_session(integration_url, capsys, session_kind, params):
 
         assert session.download("df").equals(RANGE_DATAFRAME)
         session.upload("uploaded", RANGE_DATAFRAME)
+
         session.run(params.dataframe_multiply_code)
         assert session.download("multiplied").equals(RANGE_DATAFRAME * 2)
 
