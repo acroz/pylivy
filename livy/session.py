@@ -43,11 +43,38 @@ def _spark_serialise_dataframe_code(
         )
     return template.format(spark_dataframe_name)
 
+def _handle_duplication_in_column(ordered_pairs):
+    """Rename duplicate keys."""
+    d = {}
+    for k, v in ordered_pairs:
+        if k in d:
+           k_1 = '{}*'.format(k)
+           d[k_1] = v
+        else:
+           d[k] = v
+    return d
 
-def _deserialise_dataframe(text: str) -> pandas.DataFrame:
+
+def _handle_duplication_in_column(ordered_pairs):
+    """Rename duplicated keys according to prefix."""
+    d = {}
+    for k, v in ordered_pairs:
+        if k in d:
+           k_1 = '{0}{1}'.format(duplication_prefix_global,k)
+           d[k_1] = v
+        else:
+           d[k] = v
+    return d
+
+
+def _deserialise_dataframe(text: str, manage_duplication: bool=False, duplication_prefix: str='*_') -> pandas.DataFrame:
     rows = []
     for line in text.split("\n"):
-        if line:
+        if line and manage_duplication == True:
+            global duplication_prefix_global
+            duplication_prefix_global= duplication_prefix
+            rows.append(json.loads(line, object_pairs_hook=_handle_duplication_in_column))
+        elif line and manage_duplication == False:
             rows.append(json.loads(line))
     return pandas.DataFrame.from_records(rows)
 
@@ -292,22 +319,26 @@ class LivySession:
             output.raise_for_status()
         return output
 
-    def download(self, dataframe_name: str) -> pandas.DataFrame:
+    def download(self, dataframe_name: str , manage_duplication: bool = False , duplication_prefix: str='*_') -> pandas.DataFrame:
         """Evaluate and download a Spark dataframe from the managed session.
 
         :param dataframe_name: The name of the Spark dataframe to download.
+        :param manage_duplication: Preserver column duplication from the spark DF.
+        :param duplication_prefix: Define the string to be prefixed on duplicated columns. Default = '*_'.
         """
         code = _spark_serialise_dataframe_code(dataframe_name, self.kind)
         output = self._execute(code)
         output.raise_for_status()
         if output.text is None:
             raise RuntimeError("statement had no text output")
-        return _deserialise_dataframe(output.text)
+        return _deserialise_dataframe(output.text, manage_duplication, duplication_prefix)
 
-    def read(self, dataframe_name: str) -> pandas.DataFrame:
+    def read(self, dataframe_name: str, manage_duplication: bool = False, duplication_prefix: str='*_' ) -> pandas.DataFrame:
         """Evaluate and retrieve a Spark dataframe in the managed session.
 
         :param dataframe_name: The name of the Spark dataframe to read.
+        :param manage_duplication: Preserve column duplication from the spark DF.
+        :param duplication_prefix: Define the string to be prefixed on duplicated columns. Default = '*_'.
 
         .. deprecated:: 0.8.0
             Use :meth:`download` instead.
@@ -317,7 +348,7 @@ class LivySession:
             "version. Use LivySession.download instead.",
             DeprecationWarning,
         )
-        return self.download(dataframe_name)
+        return self.download(dataframe_name, manage_duplication, duplication_prefix)
 
     def download_sql(self, query: str) -> pandas.DataFrame:
         """Evaluate a Spark SQL query and download the result.

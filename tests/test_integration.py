@@ -23,9 +23,13 @@ class Parameters:
     error_code: str
     dataframe_multiply_code: str
     dataframe_trim_code: str
+    dataframe_dup_code: str
 
 
 RANGE_DATAFRAME = pandas.DataFrame({"value": range(100)})
+DUP_DATAFRAME = pandas.DataFrame({"value": range(100),"dup_value": range(100), "*_dup_value": range(100)})
+DUP_DATAFRAME_PREFIX = pandas.DataFrame({"value": range(100),"dup_value": range(100), "test_dup_value": range(100)})
+
 SPECIAL_CHARACTER_EXAMPLES = [
     # Single and double quotes can terminate string literals in Scala/Python/R
     "'",
@@ -60,6 +64,9 @@ val multiplied = uploaded.select($"value" * 2 alias "value")
 SPARK_TRIM_DATAFRAME = """
 val trimmed = text.select(trim($"text") alias "text")
 """
+SPARK_DUP_DATAFRAME = """
+val df_dup = df.withColumn("dup_value", col("value")).join(df.withColumn("dup_value", col("value")), "value").sort(col("value"))
+"""
 SPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='println("foo")',
     print_foo_output="foo\n\n",
@@ -69,6 +76,7 @@ SPARK_TEST_PARAMETERS = Parameters(
     error_code="1 / 0",
     dataframe_multiply_code=SPARK_MULTIPLY_DATAFRAME,
     dataframe_trim_code=SPARK_TRIM_DATAFRAME,
+    dataframe_dup_code=SPARK_DUP_DATAFRAME,
 )
 
 PYSPARK_CREATE_RANGE_DATAFRAME = """
@@ -82,6 +90,10 @@ PYSPARK_TRIM_DATAFRAME = """
 from pyspark.sql.functions import trim
 trimmed = text.select(trim(text.text).alias("text"))
 """
+PYSPARK_DUP_DATAFRAME = """
+df_dup = df.withColumn('dup_value', df.value).join(df.withColumn('dup_value', df.value), 'value').sort('value')
+"""
+
 PYSPARK_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
     print_foo_output="foo\n",
@@ -91,6 +103,7 @@ PYSPARK_TEST_PARAMETERS = Parameters(
     error_code="1 / 0",
     dataframe_multiply_code=PYSPARK_MULTIPLY_DATAFRAME,
     dataframe_trim_code=PYSPARK_TRIM_DATAFRAME,
+    dataframe_dup_code=PYSPARK_DUP_DATAFRAME,
 )
 
 SPARKR_CREATE_RANGE_DATAFRAME = """
@@ -102,6 +115,9 @@ multiplied <- select(uploaded, alias(uploaded$value * 2L, "value"))
 SPARKR_TRIM_DATAFRAME = """
 trimmed <- select(text, alias(trim(text$text), "text"))
 """
+SPARKR_DUP_DATAFRAME = """
+df_dup <- withColumnRenamed(withColumn(withColumn(df, "dup_value", df$value), "dup_value*", df$value), "dup_value*", "dup_value")
+"""
 SPARKR_TEST_PARAMETERS = Parameters(
     print_foo_code='print("foo")',
     print_foo_output='[1] "foo"\n',
@@ -111,6 +127,7 @@ SPARKR_TEST_PARAMETERS = Parameters(
     error_code="missing_function()",
     dataframe_multiply_code=SPARKR_MULTIPLY_DATAFRAME,
     dataframe_trim_code=SPARKR_TRIM_DATAFRAME,
+    dataframe_dup_code=SPARKR_DUP_DATAFRAME,
 )
 
 SQL_CREATE_VIEW = """
@@ -148,8 +165,8 @@ def test_session(integration_url, capsys, session_kind, params):
             session.run(params.error_code)
 
         assert session.download("df").equals(RANGE_DATAFRAME)
-
         session.upload("uploaded", RANGE_DATAFRAME)
+
         session.run(params.dataframe_multiply_code)
         assert session.download("multiplied").equals(RANGE_DATAFRAME * 2)
 
@@ -158,6 +175,10 @@ def test_session(integration_url, capsys, session_kind, params):
         assert session.download("trimmed").equals(
             TEXT_DATAFRAME.applymap(lambda s: s.strip())
         )
+
+        session.run(params.dataframe_dup_code)
+        assert session.download("df_dup", True).equals(DUP_DATAFRAME)
+        assert session.download("df_dup", True, 'test_').equals(DUP_DATAFRAME_PREFIX)
 
     assert _session_stopped(integration_url, session.session_id)
 
